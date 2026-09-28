@@ -3,121 +3,140 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Présentation — l'alternance dans mon métier</title>
+<title>Synthèse — alternance et stages dans le marketing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/presentation.css?v=1">
+<link rel="stylesheet" href="assets/site.css?v=1">
+<link rel="stylesheet" href="assets/verif.css?v=1">
 </head>
 <body>
-<!-- Barre de réglage : masquée à l'impression -->
-<header class="reglages">
-  <a href="alternance.html" class="retour">← Page complète</a>
-  <label>Offres <select id="p-contrat"><option value="alternance">Alternance</option><option value="stage">Stage</option><option value="tous">Alternance et stage</option></select></label>
-  <label>Métier <select id="p-metier"></select></label>
-  <label><input type="checkbox" id="p-ecoles"> Inclure les offres d'écoles</label>
-  <span class="aide">Flèches ← → ou molette pour passer d'une diapo à l'autre</span>
-  <button id="p-imprimer">Imprimer / PDF</button>
-</header>
+<div id="entete"></div>
 
-<main id="diapos">
-  <!-- 0. Titre -->
-  <section class="diapo titre">
-    <p class="surtitre">Analyse de données — M1 Marketing — TD 1</p>
+<main class="page">
+  <section class="hero">
+    <p class="surtitre" id="t-surtitre">Synthèse</p>
     <h1 id="t-titre">L'alternance</h1>
-    <p class="grand" id="t-sous"></p>
-    <p class="source" id="t-sources"></p>
+    <p class="chapo" id="t-sous"></p>
   </section>
 
-  <!-- 1. Combien -->
-  <section class="diapo">
-    <h2 id="h-combien">1. Combien d'offres en alternance ?</h2>
-    <div class="nombres" id="n-nombres"></div>
-    <p class="retenir" id="r-combien"></p>
-    <div class="zone"><canvas id="g-combien"></canvas></div>
-    <p class="source" id="s-combien"></p>
-  </section>
-
-  <!-- 2. Où en France -->
-  <section class="diapo">
-    <h2>2. Où sont-elles en France ?</h2>
-    <p class="retenir" id="r-france"></p>
-    <div class="zone"><canvas id="g-france"></canvas></div>
-    <p class="source" id="s-france"></p>
-  </section>
-
-  <!-- 3. Zoom région -->
-  <section class="diapo">
-    <h2>3. Et en <span class="nom-region">Auvergne-Rhône-Alpes</span> ?</h2>
-    <p class="retenir" id="r-region"></p>
-    <div class="deux">
-      <div class="zone"><canvas id="g-region"></canvas></div>
-      <div class="zone"><canvas id="g-villes"></canvas></div>
+  <!-- Barre de sélection : suit le lecteur quand il descend -->
+  <div class="selection"><div class="selection-int">
+    <div class="segments" id="p-contrat" role="group" aria-label="Type d'offre">
+      <button data-c="alternance">Alternance</button><button data-c="stage">Stage</button><button data-c="tous">Les deux</button>
     </div>
-    <p class="source" id="s-region"></p>
-  </section>
+    <select class="champ" id="p-metier" aria-label="Métier"></select>
+    <label class="case"><input type="checkbox" id="p-ecoles"> Inclure les offres d'écoles</label>
+    <button class="bouton" id="p-imprimer" style="margin-left:auto">Imprimer / PDF</button>
+  </div></div>
 
-  <!-- 4. Contrat -->
-  <section class="diapo">
-    <h2 id="h-contrat">4. Quel contrat, quel niveau d'études ?</h2>
-    <p class="retenir" id="r-contrat"></p>
-    <div class="deux">
-      <div class="zone"><canvas id="g-type"></canvas></div>
-      <div class="zone"><canvas id="g-diplome"></canvas></div>
+  <div class="chiffres" id="n-nombres" style="margin-top:20px"></div>
+  <p class="indice-verif">Cliquez un chiffre, une barre de graphique ou « Vérifier » pour voir le calcul, les sources et la liste des offres comptées.</p>
+
+  <div class="avec-sommaire">
+    <nav class="sommaire" aria-label="Sur cette page">
+      <p>Sur cette page</p>
+      <a href="#combien">Combien d'offres</a>
+      <a href="#ou">Où en France</a>
+      <a href="#region" class="nom-region-lien">Auvergne-Rhône-Alpes</a>
+      <a href="#contrat" id="som-contrat">Contrat et diplôme</a>
+      <a href="#qui">Qui recrute</a>
+      <a href="#competences">Compétences demandées</a>
+      <a href="#salaire">Rémunération</a>
+      <a href="#methode">Méthode et limites</a>
+      <a href="offres.html" style="margin-top:10px;color:var(--accent);font-weight:600">Voir les offres →</a>
+    </nav>
+
+    <div>
+      <section class="section idee" id="combien">
+        <div class="texte"><span class="num">1</span><h2 id="h-combien">Combien d'offres ?</h2>
+          <div class="retenir verifiable" id="r-combien" data-g="g-combien"></div><p class="source" id="s-combien"></p></div>
+        <div class="graphes"><div class="carte"><h3 id="t-combien">Offres par métier</h3><div class="zone" style="height:420px"><canvas id="g-combien"></canvas></div></div></div>
+      </section>
+
+      <section class="section idee" id="ou">
+        <div class="texte"><span class="num">2</span><h2>Où sont-elles en France ?</h2>
+          <div class="retenir verifiable" id="r-france" data-g="g-france"></div><p class="source" id="s-france"></p></div>
+        <div class="graphes"><div class="carte"><h3>Par région</h3><div class="zone" style="height:400px"><canvas id="g-france"></canvas></div></div></div>
+      </section>
+
+      <section class="section idee" id="region">
+        <div class="texte"><span class="num">3</span><h2>Zoom sur <span class="nom-region">Auvergne-Rhône-Alpes</span></h2>
+          <div class="retenir verifiable" id="r-region" data-g="g-region"></div><p class="source" id="s-region"></p></div>
+        <div class="graphes deux">
+          <div class="carte"><h3>Par département</h3><div class="zone"><canvas id="g-region"></canvas></div></div>
+          <div class="carte"><h3>Les villes</h3><div class="zone"><canvas id="g-villes"></canvas></div></div>
+        </div>
+      </section>
+
+      <section class="section idee" id="contrat">
+        <div class="texte"><span class="num">4</span><h2 id="h-contrat">Quel contrat, quel niveau d'études ?</h2>
+          <div class="retenir verifiable" id="r-contrat" data-g="g-type"></div><p class="source" id="s-contrat"></p></div>
+        <div class="graphes deux">
+          <div class="carte"><h3 id="t-type">Type de contrat</h3><div class="zone"><canvas id="g-type"></canvas></div></div>
+          <div class="carte"><h3 id="t-diplome">Diplôme cité</h3><div class="zone"><canvas id="g-diplome"></canvas></div></div>
+        </div>
+      </section>
+
+      <section class="section idee" id="qui">
+        <div class="texte"><span class="num">5</span><h2>Qui recrute ?</h2>
+          <div class="retenir verifiable" id="r-qui" data-g="g-taille"></div><p class="source" id="s-qui"></p></div>
+        <div class="graphes deux">
+          <div class="carte"><h3 id="t-taille">Taille de l'employeur</h3><div class="zone"><canvas id="g-taille"></canvas></div></div>
+          <div class="carte"><h3>Secteur de l'employeur</h3><div class="zone"><canvas id="g-secteur"></canvas></div></div>
+        </div>
+      </section>
+
+      <section class="section idee" id="competences">
+        <div class="texte"><span class="num">6</span><h2>Qu'est-ce qu'on nous demande ?</h2>
+          <div class="retenir verifiable" id="r-outils" data-g="g-outils"></div><p class="source" id="s-outils"></p></div>
+        <div class="graphes"><div class="carte"><h3>Part des offres qui citent…</h3><div class="zone" style="height:420px"><canvas id="g-outils"></canvas></div></div></div>
+      </section>
+
+      <section class="section idee" id="salaire">
+        <div class="texte"><span class="num">7</span><h2>Combien ça paie ?</h2>
+          <div class="retenir verifiable" id="r-salaire" data-g="g-salaire"></div><p class="source" id="s-salaire"></p></div>
+        <div class="graphes"><div class="carte"><h3 id="t-salaire">Minimum affiché, brut par mois</h3><div class="zone"><canvas id="g-salaire"></canvas></div></div></div>
+      </section>
+
+      <section class="section" id="methode">
+        <div class="section-tete"><span class="num">8</span><h2>D'où viennent ces chiffres ?</h2>
+          <p>Tout est recalculé chaque matin automatiquement. Le détail des contrôles est dans <a href="alternance.html#fiabilite">Méthode et sources</a>.</p></div>
+        <div class="grille">
+          <div class="carte"><h3>Les sources</h3><ul id="m-sources" class="liste-simple"></ul></div>
+          <div class="carte"><h3>Ce qui a été vérifié</h3><ul id="m-verifs" class="liste-simple"></ul></div>
+          <div class="carte large"><h3>Les limites</h3>
+            <ul class="liste-simple">
+              <li><b>Une offre n'est pas un poste</b> : beaucoup d'alternances et de stages se trouvent sans annonce (candidature spontanée, réseau).</li>
+              <li><b>Les écoles publient des offres</b> pour recruter leurs élèves : elles sont retirées par défaut (case « Inclure les offres d'écoles »).</li>
+              <li><b>Le métier est celui choisi par l'employeur</b> (France Travail, La bonne alternance) ou déduit du titre (Adzuna).</li>
+              <li><b>Le salaire et la durée sont rarement affichés</b> : les chiffres portent sur les offres qui les donnent.</li>
+              <li><b>Une photographie</b> des offres en ligne le matin de la collecte, pas un suivi des embauches.</li>
+            </ul></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <a class="carte appel" href="offres.html" id="appel-offres">
+          <span><b id="appel-titre">Voir les offres disponibles</b><br><span class="note">Toutes les annonces encore en ligne ce matin, avec les filtres métier, zone et durée.</span></span>
+          <span class="bouton plein">Voir les offres →</span>
+        </a>
+      </section>
     </div>
-    <p class="source" id="s-contrat"></p>
-  </section>
-
-  <!-- 5. Qui recrute -->
-  <section class="diapo">
-    <h2>5. Qui recrute ?</h2>
-    <p class="retenir" id="r-qui"></p>
-    <div class="deux">
-      <div class="zone"><canvas id="g-taille"></canvas></div>
-      <div class="zone"><canvas id="g-secteur"></canvas></div>
-    </div>
-    <p class="source" id="s-qui"></p>
-  </section>
-
-  <!-- 6. Compétences -->
-  <section class="diapo">
-    <h2>6. Qu'est-ce qu'on nous demande ?</h2>
-    <p class="retenir" id="r-outils"></p>
-    <div class="zone haute"><canvas id="g-outils"></canvas></div>
-    <p class="source" id="s-outils"></p>
-  </section>
-
-  <!-- 7. Salaire -->
-  <section class="diapo">
-    <h2>7. Combien ça paie ?</h2>
-    <p class="retenir" id="r-salaire"></p>
-    <div class="zone"><canvas id="g-salaire"></canvas></div>
-    <p class="source" id="s-salaire"></p>
-  </section>
-
-  <!-- 8. Méthode -->
-  <section class="diapo">
-    <h2>8. D'où viennent ces chiffres ?</h2>
-    <div class="deux texte">
-      <div>
-        <h3>Les sources</h3>
-        <ul id="m-sources"></ul>
-        <h3>Ce qu'on a vérifié</h3>
-        <ul id="m-verifs"></ul>
-      </div>
-      <div>
-        <h3>Les limites</h3>
-        <ul>
-          <li><b>Une offre n'est pas un poste</b> : beaucoup d'alternances se trouvent sans annonce (candidature spontanée, réseau).</li>
-          <li><b>Les écoles publient des offres</b> pour recruter leurs élèves : on les a retirées (sauf si la case est cochée).</li>
-          <li><b>Le métier est celui choisi par l'employeur</b> (ou déduit du titre pour Adzuna).</li>
-          <li><b>Le salaire est rarement affiché</b> ; pour un apprenti, il dépend surtout de l'âge et de l'année de contrat.</li>
-          <li><b>Une photographie</b> des offres actives à une date, pas un suivi dans le temps.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
+  </div>
 </main>
 
+<div id="pied"></div>
+
+<style>
+  .idee .num { color:var(--accent); font-weight:700; font-size:.8rem; background:var(--accent-pale); border-radius:7px; padding:2px 8px; }
+  .liste-simple { margin:0; padding-left:20px; font-size:.93rem; } .liste-simple li { margin:5px 0; }
+  a.appel { display:flex; align-items:center; justify-content:space-between; gap:16px; color:var(--encre); flex-wrap:wrap; }
+  a.appel:hover { text-decoration:none; border-color:var(--accent); }
+</style>
 <script src="data/alternance.js"></script>
-<script src="assets/presentation.js?v=1"></script>
+<script src="assets/site.js?v=1"></script>
+<script src="assets/verif.js?v=1"></script>
+<script src="assets/presentation.js?v=2"></script>
 </body>
 </html>

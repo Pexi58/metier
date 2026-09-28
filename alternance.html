@@ -3,23 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Alternance — le marché de mon métier</title>
+<title>Explorer — alternance et stages dans le marketing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.min.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="assets/commun.css?v=3">
-<link rel="stylesheet" href="assets/alternance.css?v=1">
+<link rel="stylesheet" href="assets/site.css?v=1">
+<link rel="stylesheet" href="assets/verif.css?v=1">
+<link rel="stylesheet" href="assets/alternance.css?v=2">
 </head>
 <body>
-<main>
-  <nav class="nav">
-    <a href="index.html">Accueil</a><a href="salaires.html">Ce que ça paie</a><a href="exigences.html">Ce qu'on vous demande</a>
-    <a href="recruteurs.html">Qui recrute</a><a href="mouvement.html">Le marché bouge</a><a href="alternance.html" class="ici" aria-current="page">Alternance</a><a href="presentation.html">Présentation</a>
-  </nav>
-  <h1 id="titre-page">L'alternance et les stages, métier par métier</h1>
-  <p class="sous" id="sous">Chargement des données…</p>
+<div id="entete"></div>
+<main class="page">
+  <section class="hero">
+    <p class="surtitre">Explorer les données</p>
+    <h1 id="titre-page">Tous les filtres, tous les graphiques</h1>
+    <p class="chapo" id="sous">Chargement des données…</p>
+  </section>
 
   <!-- ============ 1. LE MÉTIER VISÉ ET LES FILTRES ============ -->
   <div class="carte panneau">
@@ -73,6 +76,7 @@
 
   <!-- ============ 3. EN CHIFFRES ============ -->
   <h2>En chiffres <small id="titre-sel"></small></h2>
+  <p class="indice-verif">Cliquez un chiffre, une barre de graphique ou « Vérifier ce calcul » pour voir le calcul, les sources et la liste des offres comptées.</p>
   <div class="chiffres" id="chiffres"></div>
 
   <!-- ============ 4. OÙ ============ -->
@@ -179,18 +183,15 @@
     </div>
   </div>
 
-  <footer>
-    Chaîne : <code>data/brut</code> + <code>data/actives</code> (France Travail, dépôt du cours) + La bonne alternance + Adzuna (si clés dans <code>.env</code>)
-    → <code>scripts/alternance.mjs</code> (nettoyage, dédoublonnage, croisement API Recherche d'entreprises, contrôles)
-    → <code>data/alternance.json</code> → cette page, qui recalcule tout dans le navigateur. Les métiers suivis sont dans <code>config/alternance.json</code>.
-    Pas de scraping de LinkedIn, Indeed ou APEC (interdit par leurs CGU).
-  </footer>
 </main>
+<div id="pied"></div>
 
 <dialog id="fiche"><div id="fiche-corps"></div><form method="dialog"><button>Fermer</button></form></dialog>
 
 <script src="data/alternance.js"></script>
 <script src="data/alternance-recruteurs.js"></script>
-<script src="assets/alternance.js?v=1"></script>
+<script src="assets/site.js?v=1"></script>
+<script src="assets/verif.js?v=1"></script>
+<script src="assets/alternance.js?v=2"></script>
 </body>
 </html>

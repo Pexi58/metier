@@ -1,41 +1,69 @@
-/* alternance.css — ce que la page Alternance ajoute à commun.css */
-.panneau { display:grid; gap:14px; }
+/* alternance.css — ce que la page Explorer ajoute à site.css */
+.page > h2 { font-size:1.3rem; margin:44px 0 14px; }
+.page > h2 small { font-weight:400; color:var(--gris); font-size:.85rem; }
+
+/* ---- Panneau de filtres ---- */
+.panneau { display:grid; gap:16px; margin-top:18px; }
 .ligne-metier { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-.ligne-metier select, .ligne-metier input { font:inherit; padding:7px 10px; border:1px solid var(--trait); border-radius:8px; background:var(--carte); }
+.ligne-metier select, .ligne-metier input { font:inherit; font-size:.93rem; padding:8px 12px; border:1px solid var(--trait); border-radius:10px; background:#fff; min-height:38px; }
 .ligne-metier select { flex:1 1 320px; font-weight:600; }
 .ligne-metier input { flex:1 1 260px; }
-.filtres-alt { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(210px,100%), 1fr)); gap:24px; align-items:start; }
-.filtres-alt h3 { margin:0 0 8px; font-size:.85rem; text-transform:uppercase; letter-spacing:.04em; color:var(--gris); }
-.filtres-alt select { font:inherit; font-size:.9rem; margin-top:8px; width:100%; padding:4px 8px; border:1px solid var(--trait); border-radius:8px; background:var(--carte); }
-.puces { display:flex; gap:6px; flex-wrap:wrap; }
-.puces button { font:inherit; font-size:.85rem; padding:4px 12px; border:1px solid var(--trait); border-radius:99px; background:var(--carte); cursor:pointer; }
-.puces button.actif { background:var(--accent); border-color:var(--accent); color:#fff; }
-.puces.grosses button { font-size:1rem; font-weight:600; padding:6px 16px; }
+.puces.grosses { background:#e8ebf2; border-radius:11px; padding:3px; gap:0; }
+.puces.grosses button { border:0; border-radius:9px; background:transparent; font-weight:600; font-size:.92rem; padding:7px 15px; color:var(--gris); }
+.puces.grosses button.actif { background:#fff; color:var(--encre); box-shadow:0 1px 3px rgba(16,24,40,.12); }
+.filtres-alt { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(210px,100%), 1fr)); gap:22px; align-items:start; }
 .filtres-alt > div[hidden] { display:none; }
+.filtres-alt h3 { margin:0 0 8px; font-size:.74rem; text-transform:uppercase; letter-spacing:.06em; color:var(--gris-clair); font-weight:600; }
+.filtres-alt select { font:inherit; font-size:.9rem; margin-top:8px; width:100%; padding:6px 10px; border:1px solid var(--trait); border-radius:9px; background:#fff; }
+.cases label { display:flex; align-items:center; gap:8px; font-size:.92rem; cursor:pointer; padding:2px 0; }
+.cases label input { accent-color:var(--accent); flex:none; width:15px; height:15px; }
+.cases label small { color:var(--gris-clair); margin-left:auto; padding-left:8px; }
+.compte { margin:0; font-size:.95rem; color:var(--gris); }
+.compte b { color:var(--encre); }
+.boutons { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:4px; }
+.boutons button { font:inherit; font-size:.88rem; font-weight:500; padding:7px 13px; border:1px solid var(--trait); border-radius:10px; background:#fff; cursor:pointer; }
+.boutons button:hover { border-color:var(--accent); color:var(--accent); }
 .boutons button:disabled { opacity:.5; cursor:default; }
-.lecture { margin:10px 0 0; font-size:.92rem; line-height:1.45; }
-.lecture b:first-child { color:var(--accent); }
+.vide { background:#fff6e5; border:1px solid #f0d9a8; border-radius:12px; padding:12px 16px; margin:16px 0 0; font-size:.95rem; }
+.non { color:var(--rouge); font-weight:600; } .oui { color:var(--vert); font-weight:700; }
+
+/* ---- Carte des offres ---- */
+#map { height:560px; border-radius:10px; }
+.carte-outils { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:0 0 10px; }
+.carte-outils button { font:inherit; font-size:.85rem; padding:5px 12px; border:1px solid var(--trait); border-radius:9px; background:#fff; cursor:pointer; }
+.carte-outils button:hover { border-color:var(--accent); color:var(--accent); }
 .carte-outils label { font-size:.9rem; display:flex; align-items:center; gap:6px; }
-.carte-outils input, .carte-outils select { font:inherit; font-size:.9rem; padding:3px 6px; border:1px solid var(--trait); border-radius:6px; }
-.badge { display:inline-block; font-size:.72rem; line-height:1.55; padding:0 8px; border-radius:99px; border:1px solid var(--trait); color:var(--gris); white-space:nowrap; }
-.badge.ecole { background:#fff1e6; border-color:#ffc79c; color:#a34700; }
+.carte-outils input, .carte-outils select { font:inherit; font-size:.9rem; padding:5px 8px; border:1px solid var(--trait); border-radius:8px; }
+.carte-outils .legende { margin-left:auto; font-size:.84rem; color:var(--gris); display:flex; gap:12px; flex-wrap:wrap; }
+.legende i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+.grappe { background:rgba(31,94,255,.88); color:#fff; border:2px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font:600 12px var(--police); box-shadow:0 1px 4px rgba(0,0,0,.3); }
+.leaflet-popup-content { font:13px/1.4 var(--police); margin:10px 12px; }
+.leaflet-popup-content b { display:block; font-size:14px; margin-bottom:2px; }
+
+/* ---- Listes (offres, entreprises) ---- */
+.liste { display:grid; gap:8px; }
+.item { background:#fff; border:1px solid var(--trait); border-radius:12px; padding:11px 14px; }
+.item .titre { font-weight:600; }
+.item .meta { color:var(--gris); font-size:.87rem; margin-top:3px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.sal { color:var(--vert); font-weight:600; }
 .badge.interim { background:#f0f0f3; color:#555; }
-.badge.src { background:#eef3ff; border-color:#c6d7ff; color:#0a4ad0; }
-.badge.ok { background:#e8f5ec; border-color:#b5dfc1; color:#137333; }
-.item button.lien-ent { font:inherit; font-size:.85rem; border:0; background:none; color:var(--accent); cursor:pointer; padding:0; }
-.item button.lien-ent:hover { text-decoration:underline; }
+.item button.lien-ent, button.lien-ent { font:inherit; font-size:.87rem; border:0; background:none; color:var(--accent); cursor:pointer; padding:0; }
+button.lien-ent:hover { text-decoration:underline; }
+
+/* ---- Tableaux (région, fiabilité) ---- */
 table.q { width:100%; border-collapse:collapse; font-size:.9rem; }
-table.q td, table.q th { text-align:left; padding:5px 8px; border-bottom:1px solid var(--trait); vertical-align:top; }
-table.q th { color:var(--gris); font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.03em; }
+table.q td, table.q th { text-align:left; padding:7px 8px; border-bottom:1px solid var(--trait); vertical-align:top; }
+table.q th { color:var(--gris); font-weight:600; font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; }
 table.q td.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.oui { color:#137333; font-weight:700; } .non { color:#c5221f; font-weight:700; }
-.limites { margin:0; padding-left:20px; } .limites li { margin:4px 0; }
-dialog { border:1px solid var(--trait); border-radius:14px; padding:20px; max-width:560px; width:calc(100% - 32px); }
-dialog::backdrop { background:rgba(0,0,0,.35); }
-dialog form { margin-top:14px; text-align:right; }
-dialog button { font:inherit; padding:5px 14px; border:1px solid var(--trait); border-radius:8px; background:var(--carte); cursor:pointer; }
+.limites { margin:0; padding-left:20px; } .limites li { margin:5px 0; }
+
+/* ---- Fiche d'un employeur (fenêtre propre à cette page) ---- */
+#fiche { border:1px solid var(--trait); border-radius:14px; padding:20px; max-width:560px; width:calc(100% - 32px); }
+#fiche::backdrop { background:rgba(0,0,0,.35); }
+#fiche form { margin-top:14px; text-align:right; }
+#fiche button { font:inherit; padding:6px 14px; border:1px solid var(--trait); border-radius:9px; background:#fff; cursor:pointer; }
 dl.fiche { display:grid; grid-template-columns:max-content 1fr; gap:4px 14px; margin:10px 0 0; font-size:.93rem; }
-dl.fiche dt { color:var(--gris); }
-dl.fiche dd { margin:0; }
+dl.fiche dt { color:var(--gris); } dl.fiche dd { margin:0; }
+
 @media (max-width:980px) { .filtres-alt { grid-template-columns:1fr 1fr; } }
-@media (max-width:560px) { .filtres-alt { grid-template-columns:1fr; } }
+@media (max-width:560px) { .filtres-alt { grid-template-columns:1fr; } #map { height:420px; } }

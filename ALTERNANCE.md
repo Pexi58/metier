@@ -4,12 +4,22 @@ Deux pages et un script qui se concentrent sur les **offres en alternance** (app
 professionnalisation), pour **n'importe lequel des 23 métiers suivis** : le métier n'est pas figé,
 il se choisit dans la page. Toute la France est couverte, et **Auvergne-Rhône-Alpes** l'est en détail.
 
-## Les deux pages
+## Le site : trois pages, un même menu
+
+En ligne (mis à jour chaque matin) : **https://pexi58.github.io/metier/presentation.html**
 
 | Page | À quoi elle sert |
 |---|---|
-| `presentation.html` | **Pour présenter** : une question par écran (combien, où, zoom région, contrat, qui recrute, compétences, salaire, méthode), une phrase « À retenir » avec son chiffre, un graphique, sa source. Flèches du clavier pour avancer, bouton « Imprimer / PDF ». |
-| `alternance.html` | **Pour explorer** : tous les filtres (métier, zone, contrat, sources…), la carte, le zoom département par département, la liste des offres, les entreprises à démarcher, et la section « Fiabilité ». |
+| **Synthèse** — `presentation.html` | L'essentiel pour un métier : chiffres-clés, puis une idée par section (combien, où, zoom région, contrat ou durée, qui recrute, compétences, rémunération, méthode). Sommaire sur le côté, bouton « Imprimer / PDF ». |
+| **Explorer les données** — `alternance.html` | Tous les filtres (métier, zone, contrat, durée, sources…), la carte, le zoom département par département, la liste des offres, les entreprises à démarcher, et la section « Méthode et sources ». |
+| **Offres disponibles** — `offres.html` | Toutes les offres encore en ligne à la collecte du matin, en cartes cliquables vers l'annonce d'origine ; filtres type, métier, zone, durée de stage, mot-clé, salaire affiché ; export CSV. |
+
+Le choix « Alternance / Stage / Les deux » et le métier **suivent d'une page à l'autre**.
+
+**Chaque chiffre est vérifiable** : un clic sur un chiffre-clé, sur une barre de graphique ou sur « Vérifier »
+ouvre une fenêtre qui montre le calcul (ex. « 188 ÷ 938 = 20 % »), les filtres appliqués, d'où vient la valeur
+(champ de la source ou lu dans le texte), les sources des offres comptées avec le lien vers chaque API, et la
+liste de ces offres (chacune cliquable vers l'annonce), exportable en CSV pour refaire le calcul dans Excel.
 
 Les offres **publiées par des écoles** (qui recrutent surtout leurs futurs élèves) sont **masquées par défaut** ;
 une case permet de les afficher.

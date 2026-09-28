@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offres disponibles — alternance et stages dans le marketing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/site.css?v=1">
+<link rel="stylesheet" href="assets/verif.css?v=1">
+<style>
+  .filtres2 { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .filtres2[hidden] { display:none; }
+  .resultats-tete { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:22px 0 12px; }
+  .resultats-tete h2 { font-size:1.15rem; margin:0; }
+  .resultats-tete .droite { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+  .offres { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(360px,100%), 1fr)); gap:14px; }
+  .offre { display:flex; flex-direction:column; gap:8px; background:var(--carte); border:1px solid var(--trait); border-radius:var(--rayon); padding:16px 18px; box-shadow:var(--ombre); transition:border-color .15s, transform .15s; }
+  .offre:hover { border-color:#b9ccff; transform:translateY(-1px); }
+  .offre .etiquettes { display:flex; gap:6px; flex-wrap:wrap; }
+  .offre h3 { font-size:1.02rem; line-height:1.35; margin:0; }
+  .offre h3 a { color:var(--encre); } .offre h3 a:hover { color:var(--accent); }
+  .offre .qui { font-weight:500; color:#2c313b; font-size:.93rem; }
+  .offre .infos { color:var(--gris); font-size:.87rem; display:flex; gap:6px 14px; flex-wrap:wrap; }
+  .offre .sal { color:var(--vert); font-weight:600; }
+  .offre .bas { margin-top:auto; display:flex; align-items:center; gap:10px; padding-top:8px; border-top:1px solid #f0f2f6; font-size:.8rem; color:var(--gris-clair); }
+  .offre .bas a { margin-left:auto; font-weight:600; font-size:.88rem; }
+  .vide-offres { text-align:center; padding:40px 20px; color:var(--gris); }
+  input.champ[type=search] { min-width:min(280px, 100%); }
+</style>
+</head>
+<body>
+<div id="entete"></div>
+
+<main class="page">
+  <section class="hero">
+    <p class="surtitre" id="o-surtitre">Offres disponibles</p>
+    <h1>Les offres en ligne ce matin</h1>
+    <p class="chapo">Toutes les annonces renvoyées par les sources lors de la collecte automatique du matin : elles étaient encore ouvertes. Cliquez une offre pour lire l'annonce d'origine.</p>
+  </section>
+
+  <div class="selection"><div class="selection-int">
+    <div class="segments" id="o-contrat" role="group" aria-label="Type d'offre">
+      <button data-c="alternance">Alternance</button><button data-c="stage">Stage</button><button data-c="tous">Les deux</button>
+    </div>
+    <select class="champ" id="o-metier" aria-label="Métier"></select>
+    <select class="champ" id="o-zone" aria-label="Zone"></select>
+    <input class="champ" id="o-mot" type="search" placeholder="Rechercher : titre, entreprise, ville…" aria-label="Recherche">
+  </div>
+  <div class="filtres2">
+    <div id="o-durees-bloc" class="puces" aria-label="Durée du stage"></div>
+    <label class="case"><input type="checkbox" id="o-ecoles"> Inclure les offres d'écoles</label>
+    <label class="case"><input type="checkbox" id="o-recentes"> Publiées il y a moins de 30 jours</label>
+    <label class="case"><input type="checkbox" id="o-salaire"> Avec un salaire affiché</label>
+  </div></div>
+
+  <div class="resultats-tete">
+    <h2 id="o-compte">Offres</h2>
+    <div class="droite">
+      <select class="champ" id="o-tri" aria-label="Trier">
+        <option value="date">Les plus récentes</option><option value="salaire">Salaire affiché</option><option value="ville">Ville (A → Z)</option>
+      </select>
+      <button class="bouton" id="o-verif">Sources de ces offres</button>
+      <button class="bouton" id="o-csv">Exporter (CSV)</button>
+    </div>
+  </div>
+  <div class="offres" id="o-liste"></div>
+  <div style="text-align:center;margin-top:20px"><button class="bouton plein" id="o-plus" hidden>Afficher plus d'offres</button></div>
+</main>
+
+<div id="pied"></div>
+
+<script src="data/alternance.js"></script>
+<script src="assets/site.js?v=1"></script>
+<script src="assets/verif.js?v=1"></script>
+<script src="assets/offres.js?v=1"></script>
+</body>
+</html>

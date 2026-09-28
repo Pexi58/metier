@@ -1,0 +1,27 @@
+/* verif.css — la fenêtre « Vérifier ce chiffre » et les éléments cliquables */
+#verif { border:1px solid #e5e5ea; border-radius:14px; padding:0; width:min(980px, calc(100% - 24px)); max-height:calc(100vh - 40px); color:#1d1d1f; font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+#verif::backdrop { background:rgba(0,0,0,.4); }
+.verif-tete { position:sticky; top:0; display:flex; justify-content:space-between; gap:8px; padding:10px 16px; background:#fff; border-bottom:1px solid #e5e5ea; z-index:1; }
+.verif-tete button { font:inherit; font-size:.9rem; padding:4px 12px; border:1px solid #e5e5ea; border-radius:8px; background:#fff; cursor:pointer; }
+.verif-fermer { margin-left:auto; }
+.verif-corps { padding:4px 20px 20px; overflow:auto; max-height:calc(100vh - 100px); }
+.verif-corps h2 { font-size:1.3rem; margin:2px 0 10px; }
+.verif-corps h3 { font-size:1rem; margin:18px 0 6px; color:#0a5cff; }
+.verif-surtitre { color:#6e6e73; text-transform:uppercase; letter-spacing:.05em; font-size:.75rem; margin:14px 0 0; }
+.verif-calcul { font-size:1.1rem; background:#f5f5f7; border-radius:10px; padding:10px 14px; }
+.verif-note { color:#6e6e73; font-size:.88rem; }
+.verif-sources { margin:0; padding-left:20px; }
+.verif-corps button { font:inherit; font-size:.88rem; padding:4px 12px; border:1px solid #c6d7ff; border-radius:8px; background:#eef3ff; color:#0a4ad0; cursor:pointer; }
+.verif-table { overflow-x:auto; }
+.verif-table table, .verif-repart { width:100%; border-collapse:collapse; font-size:.86rem; }
+.verif-table th, .verif-table td, .verif-repart th, .verif-repart td { text-align:left; padding:5px 8px; border-bottom:1px solid #eee; vertical-align:top; }
+.verif-table th, .verif-repart th { color:#6e6e73; font-size:.75rem; text-transform:uppercase; letter-spacing:.03em; }
+.verif-repart td.n { text-align:right; font-variant-numeric:tabular-nums; }
+.verif-repart tr.cliquable { cursor:pointer; }
+.verif-repart tr.cliquable:hover td { background:#eef3ff; }
+.verif-corps a { color:#0a5cff; }
+/* Ce qui ouvre la fenêtre */
+.verifiable { cursor:pointer; }
+.chiffre.verifiable:hover, .retenir.verifiable:hover, .nombres div.verifiable:hover { border-color:#0a5cff; box-shadow:0 0 0 2px rgba(10,92,255,.15); }
+.lien-verif { font:inherit; font-size:.85rem; border:0; background:none; color:#0a5cff; cursor:pointer; padding:0; margin-left:6px; text-decoration:underline; text-underline-offset:2px; }
+.indice-verif { color:#6e6e73; font-size:.85rem; margin:4px 0 12px; }

@@ -70,6 +70,10 @@ let E = { ...DEFAUT };
 function lireAdresse() {
   const p = new URLSearchParams(location.hash.slice(1));
   E = { ...DEFAUT };
+  // Le dernier choix fait sur une autre page (Synthèse, Offres), puis ce que dit l'adresse.
+  const ch = window.Site ? Site.lireChoix() : {};
+  if (["alternance", "stage", "tous"].includes(ch.c)) E.c = ch.c;
+  if (ch.m) E.m = ch.m;
   for (const k of Object.keys(DEFAUT)) if (p.has(k)) E[k] = p.get(k);
   if (E.m !== "*" && !E.m.startsWith("g:") && !METIER[E.m]) E.m = DEFAUT.m;
 }
@@ -77,6 +81,7 @@ function ecrireAdresse() {
   const p = new URLSearchParams();
   for (const k of Object.keys(DEFAUT)) if (E[k] !== DEFAUT[k]) p.set(k, E[k]);
   history.replaceState(null, "", location.pathname + location.search + (p.toString() ? "#" + p : ""));
+  if (window.Site) Site.memoriser({ c: E.c, m: E.m });
 }
 const ensemble = v => new Set(String(v || "").split(",").filter(Boolean));
 
@@ -101,14 +106,15 @@ function filtreSansMetier(o, f, zone = E.z) {
   if (f.mots.length) { const t = norm(o.titre); if (!f.mots.every(w => t.includes(w))) return false; }
   return true;
 }
-/* Combien d'offres d'écoles la sélection cache : mêmes filtres, écoles comprises. */
-function ecolesMasquees() {
+/* Les offres d'écoles que la sélection cache : mêmes filtres, écoles comprises. */
+function listeEcolesMasquees() {
   const f = filtresCourants();
   const avant = E.e; E.e = "1";
-  const n = D.offres.filter(o => o.ecole && passeMetier(o, E.m) && filtreSansMetier(o, f)).length;
+  const l = D.offres.filter(o => o.ecole && passeMetier(o, E.m) && filtreSansMetier(o, f));
   E.e = avant;
-  return n;
+  return l;
 }
+const ecolesMasquees = () => listeEcolesMasquees().length;
 function libelleMetier(m) {
   if (!m || m === "*") return "tous les métiers suivis";
   if (m.startsWith("g:")) return "le groupe « " + m.slice(2) + " »";
@@ -125,6 +131,11 @@ const G = {};
 function graph(id, type, data, options) {
   const el = document.getElementById(id);
   const opts = Object.assign({ responsive: true, maintainAspectRatio: false, animation: false }, options);
+  // Par défaut, un clic sur une barre ou une part ouvre « Vérifier ce chiffre » pour cette catégorie.
+  if (!opts.onClick) {
+    opts.onClick = (ev, els) => { if (els.length) verifCategorie(id, els[0].index); };
+    opts.onHover = (ev, els) => { ev.native.target.style.cursor = els.length && VERIF[id] ? "pointer" : "default"; };
+  }
   if (G[id]) { G[id].data = data; G[id].options = opts; G[id].resize(); G[id].update(); return G[id]; }
   G[id] = new Chart(el, { type, data, options: opts });
   return G[id];
@@ -149,8 +160,43 @@ function anneau(id, etiquettes, valeurs, couleurs) {
       generateLabels: ch => ch.data.labels.map((l, i) => ({ text: `${l} — ${pct(valeurs[i], total)} %`, fillStyle: couleurs[i], strokeStyle: couleurs[i], index: i })) } },
       tooltip: { callbacks: { label: c => `${c.label} : ${nb(c.parsed)} offre${s(c.parsed)} (${pct(c.parsed, total)} %)` } } } });
 }
-const lecture = (id, html) => { document.getElementById(id).innerHTML = html ? "<b>Lecture :</b> " + html : ""; };
+// Chaque phrase de lecture se termine par « Vérifier ce calcul », qui ouvre la répartition complète du graphique.
+const lecture = (id, html) => {
+  const g = id.replace(/^l-/, "g-");
+  document.getElementById(id).innerHTML = html ? "<b>Lecture :</b> " + html + (id !== "l-serie" ? ` <button class="lien-verif" data-g="${g}">Vérifier ce calcul</button>` : "") : "";
+};
 const pluriel = (n, mot) => `${nb(n)} ${mot}${s(n)}`;
+
+/* ---- Vérifier un chiffre (fenêtre de assets/verif.js) ----
+   verifier(id, …) déclare ce qu'un graphique compte : la barre n° i = les offres de « base »
+   dont cle(o) vaut cles[i]. Un clic sur la barre, ou sur « Vérifier ce calcul », ouvre alors
+   le calcul, les filtres, la provenance et la liste des offres comptées. */
+const VERIF = {};
+function verifier(id, v) { VERIF[id] = v; }
+const offresDe = (v, i) => v.base.filter(o => [].concat(v.cle(o)).includes(v.cles[i]));
+const libelleDe = (v, i) => v.libelles ? v.libelles[i] : v.cles[i];
+function verifCategorie(id, i) {
+  const v = VERIF[id]; if (!v || v.cles[i] == null) return;
+  const off = offresDe(v, i), den = v.total != null ? v.total : v.base.length;
+  Verif.ouvrir({ titre: `${v.titre} — ${libelleDe(v, i)}`, calcul: { num: off.length, den, texte: `Offres « ${libelleDe(v, i)} » ÷ ${v.totalLibelle || "offres de la sélection"}` },
+    champ: v.champ, filtres: v.filtres || decrireFiltres(), offres: off, base: v.base, valeur: v.valeur, note: v.note });
+}
+function verifGraphique(id) {
+  const v = VERIF[id]; if (!v) return;
+  Verif.ouvrir({ titre: v.titre, lignes: v.cles.map((k, i) => ({ libelle: libelleDe(v, i), offres: offresDe(v, i) })),
+    total: v.total != null ? v.total : v.base.length, totalLibelle: v.totalLibelle, champ: v.champ, filtres: v.filtres || decrireFiltres(), base: v.base, valeur: v.valeur, note: v.note });
+}
+function decrireFiltres() {
+  const p = [`offres : ${({ alternance: "alternance", stage: "stages", tous: "alternance et stages" })[E.c]}`, `métier : ${libelleMetier(E.m)}`, `zone : ${libelleZone(E.z)}`];
+  if (E.q) p.push(`intitulé contenant « ${E.q} »`);
+  p.push(E.e === "1" ? "écoles comprises" : "offres d'écoles masquées");
+  if (E.i === "1") p.push("intérim et cabinets masqués");
+  if (E.r === "1") p.push("moins de 90 jours seulement");
+  if (E.c !== "stage" && ensemble(E.t).size < TYPES.length) p.push(`contrats : ${[...ensemble(E.t)].join(", ")}`);
+  if (E.c !== "alternance" && ensemble(E.d).size < DUREES.length) p.push(`durées : ${[...ensemble(E.d)].map(i => DUREES[+i]).join(", ")}`);
+  p.push(`sources : ${[...ensemble(E.s)].map(k => SOURCES[k]).join(", ")}`);
+  return p.join(" · ") + " · une offre vue dans plusieurs sources ne compte qu'une fois.";
+}
 
 /* ============================================================
    5) LE RENDU
@@ -232,6 +278,9 @@ function rendreRegion(f) {
   const N = tot("n");
   const tri = lignes.slice().sort((a, b) => b.n - a.n);
   barres("g-region", tri.map(l => libDep(l.d)), tri.map(l => l.n), { total: N });
+  const filtresRegion = decrireFiltres().replace(/zone : [^·]*·/, `zone : ${REG.nom} (le choix de zone ne s'applique pas ici) ·`);
+  verifier("g-region", { titre: `Offres par département — ${REG.nom}`, base: offres, cle: o => o.dep, cles: tri.map(l => l.d), libelles: tri.map(l => libDep(l.d)),
+    champ: "lieu", filtres: filtresRegion, totalLibelle: `offres de la région`, valeur: o => `${o.ville || "—"} (${o.dep})` });
   const vides = lignes.filter(l => !l.n);
   const l63 = lignes.find(l => l.d === "63");
   lecture("l-region", N ? `<b>${nb(N)} offres</b> ${EN()} en ${esc(REG.nom)} pour ${esc(libelleMetier(E.m))}. <b>${esc(libDep(tri[0].d))}</b> en concentre ${pct(tri[0].n, N)} % (${nb(tri[0].n)}).`
@@ -241,6 +290,8 @@ function rendreRegion(f) {
 
   const villes = compter(offres, o => villeSimple(o.ville) || null).slice(0, 12);
   barres("g-region-villes", villes.map(x => x[0]), villes.map(x => x[1]), { total: N });
+  verifier("g-region-villes", { titre: `Villes qui recrutent — ${REG.nom}`, base: offres, cle: o => villeSimple(o.ville) || null, cles: villes.map(x => x[0]),
+    champ: "lieu", filtres: filtresRegion, totalLibelle: "offres de la région", valeur: o => `${o.ville || "—"} (${o.dep})` });
   lecture("l-region-villes", villes.length ? `<b>${esc(villes[0][0])}</b> arrive en tête avec ${pluriel(villes[0][1], "offre")} (${pct(villes[0][1], N)} % de la région)${villes[1] ? `, devant ${esc(villes[1][0])} (${nb(villes[1][1])})` : ""}.` : "");
 }
 
@@ -291,6 +342,9 @@ function rendreMetiers(zoneOk) {
   G["g-metiers"].options.plugins.tooltip.callbacks.afterLabel = c => { const m = lignes[c.dataIndex].m;
     return m.total_ft ? `Au niveau national, ${pct(m.alt_ft, m.total_ft)} % des offres France Travail de ce métier sont en alternance (${m.alt_ft} sur ${m.total_ft}).` : ""; };
   G["g-metiers"].update();
+  verifier("g-metiers", { titre: "Offres par métier", base: zoneOk, cle: o => o.rome, cles: lignes.map(l => l.m.code),
+    libelles: lignes.map(l => `${l.m.libelle} (${l.m.code})`), champ: "rome",
+    filtres: decrireFiltres().replace(/métier : [^·]*· /, "tous les métiers · "), totalLibelle: "offres de tous les métiers" });
   const top = lignes[0];
   const nSel = lignes.filter(choisi).reduce((a, l) => a + l.n, 0);
   const ftSel = D.metiers.filter(m => passeMetier({ rome: m.code }, E.m));
@@ -309,22 +363,43 @@ function rendreChiffres(sel) {
   const recentes = sel.filter(o => { const a = age(o); return a != null && a < 30; }).length;
   const employeurs = new Set(sel.map(o => norm(o.ent)).filter(Boolean)).size;
   const fusion = sel.reduce((a, o) => a + (o.annonces > 1 ? o.annonces - 1 : 0), 0);
+  // Chaque tuile : [valeur, libellé, ce qu'un clic montre pour la vérifier].
+  const F = decrireFiltres();
+  const compte = (titre, offres, texte, champ, valeur) => () => Verif.ouvrir({ titre, calcul: { num: offres.length, den: null, texte }, champ, filtres: F, offres, base: sel, valeur });
+  const part = (titre, offres, texte, champ, valeur) => () => Verif.ouvrir({ titre, calcul: { num: offres.length, den: N, texte }, champ, filtres: F, offres, base: sel, valeur });
+  const lieu = o => `${o.ville || o.lieu || "—"} (${o.dep || "?"})`;
+  const dk = sel.filter(o => o.duree != null), six = dk.filter(o => o.duree >= 5 && o.duree <= 6);
+  const recentesL = sel.filter(o => { const a = age(o); return a != null && a < 30; });
   const tuiles = [
-    [nb(N), `offres ${EN()}` + (fusion ? ` (${fusion} republications comptées une fois)` : "")],
-    [nb(sel.filter(o => o.dep === "63").length), "dans le Puy-de-Dôme"],
-    [nb(sel.filter(o => o.reg === AURA).length), "en Auvergne-Rhône-Alpes"],
-    [nb(sel.filter(o => o.reg === IDF).length), "en Île-de-France"],
-    E.e === "1" ? [pct(ecoles, N) + " %", `publiées par des écoles (${nb(ecoles)})`]
-                : [nb(ecolesMasquees(sel)), "offres d'écoles masquées (case « Afficher aussi… »)"],
+    [nb(N), `offres ${EN()}` + (fusion ? ` (${fusion} republications comptées une fois)` : ""),
+      compte(`Offres ${EN()}`, sel, "Nombre d'offres qui passent tous les filtres, après suppression des doublons", "contrat", o => o.contrat)],
+    [nb(sel.filter(o => o.dep === "63").length), "dans le Puy-de-Dôme",
+      compte("Offres dans le Puy-de-Dôme", sel.filter(o => o.dep === "63"), "Offres dont le lieu est dans le département 63", "lieu", lieu)],
+    [nb(sel.filter(o => o.reg === AURA).length), "en Auvergne-Rhône-Alpes",
+      compte("Offres en Auvergne-Rhône-Alpes", sel.filter(o => o.reg === AURA), "Offres dont le département est dans la région (01, 03, 07, 15, 26, 38, 42, 43, 63, 69, 73, 74)", "lieu", lieu)],
+    [nb(sel.filter(o => o.reg === IDF).length), "en Île-de-France",
+      compte("Offres en Île-de-France", sel.filter(o => o.reg === IDF), "Offres dont le département est 75, 77, 78, 91, 92, 93, 94 ou 95", "lieu", lieu)],
+    E.e === "1" ? [pct(ecoles, N) + " %", `publiées par des écoles (${nb(ecoles)})`,
+                   part("Offres publiées par des écoles", sel.filter(o => o.ecole), "Offres d'écoles ÷ offres de la sélection", "ecole", o => o.ent)]
+                : [nb(ecolesMasquees(sel)), "offres d'écoles masquées (case « Afficher aussi… »)",
+                   compte("Offres d'écoles masquées", listeEcolesMasquees(), "Offres qui passeraient les filtres, mais publiées par une école (masquées par défaut)", "ecole", o => o.ent)],
     E.c === "stage"
-      ? (() => { const dk = sel.filter(o => o.duree != null); const six = dk.filter(o => o.duree >= 5 && o.duree <= 6).length;
-          return [dk.length ? pct(six, dk.length) + " %" : "—", `des stages de durée connue font 5 à 6 mois (${nb(dk.length)} durées connues sur ${nb(N)})`]; })()
-      : [`${pct(appr, N)} % / ${pct(pro, N)} %`, "apprentissage / professionnalisation" + (E.c === "tous" ? ` (${pct(sel.filter(o => o.contrat === "stage").length, N)} % de stages)` : "")],
-    [avecSal.length ? euro(mediane(avecSal.map(o => o.smin))) : "—", `brut mensuel médian affiché (${avecSal.length} offre${s(avecSal.length)} sur ${N})`],
-    [nb(employeurs), "employeurs différents"],
-    [pct(recentes, N) + " %", `publiées il y a moins de 30 jours (${recentes})`],
+      ? [dk.length ? pct(six.length, dk.length) + " %" : "—", `des stages de durée connue font 5 à 6 mois (${nb(dk.length)} durées connues sur ${nb(N)})`,
+         () => Verif.ouvrir({ titre: "Stages de 5 à 6 mois", calcul: { num: six.length, den: dk.length, texte: "Stages de 5 à 6 mois ÷ stages dont la durée est connue" }, champ: "duree_classe", filtres: F, offres: six, base: dk, valeur: o => o.duree + " mois" })]
+      : [`${pct(appr, N)} % / ${pct(pro, N)} %`, "apprentissage / professionnalisation" + (E.c === "tous" ? ` (${pct(sel.filter(o => o.contrat === "stage").length, N)} % de stages)` : ""),
+         () => verifGraphique("g-type")],
+    [avecSal.length ? euro(mediane(avecSal.map(o => o.smin))) : "—", `brut mensuel médian affiché (${avecSal.length} offre${s(avecSal.length)} sur ${N})`,
+      () => Verif.ouvrir({ titre: "Salaire médian affiché", calcul: { num: avecSal.length ? euro(mediane(avecSal.map(o => o.smin))) : "—", den: null,
+        texte: `Médiane des minimums affichés par ${avecSal.length} offres : la moitié affiche moins, l'autre moitié plus (triez la colonne dans Excel pour la retrouver)` },
+        champ: "salaire", filtres: F, offres: avecSal, base: sel, valeur: o => `${o.smin}${o.smax > o.smin ? "–" + o.smax : ""} € (libellé : ${o.sal_lib || "—"})` })],
+    [nb(employeurs), "employeurs différents",
+      compte("Employeurs différents", sel.filter(o => o.ent), `${nb(employeurs)} noms d'employeurs différents (sans tenir compte des majuscules ni des accents) parmi les offres qui en nomment un`, "publie_par", o => o.ent)],
+    [pct(recentes, N) + " %", `publiées il y a moins de 30 jours (${recentes})`,
+      part("Offres de moins de 30 jours", recentesL, `Offres publiées moins de 30 jours avant la collecte du ${dateFr(D.date)} ÷ offres de la sélection`, "age", o => age(o) + " jours")],
   ];
-  document.getElementById("chiffres").innerHTML = tuiles.map(([v, l]) => `<div class="chiffre"><b>${v}</b><span>${esc(l)}</span></div>`).join("");
+  const el = document.getElementById("chiffres");
+  el.innerHTML = tuiles.map(([v, l], i) => `<div class="chiffre verifiable" data-k="${i}" title="Cliquer pour vérifier ce chiffre"><b>${v}</b><span>${esc(l)}</span></div>`).join("");
+  el.querySelectorAll(".chiffre").forEach(t => t.addEventListener("click", () => tuiles[+t.dataset.k][2]()));
 }
 
 /* ---- Carte ---- */
@@ -354,6 +429,9 @@ function rendreLieux(sel) {
   par = par.slice(0, 14);
   document.getElementById("t-lieux").textContent = titre;
   barres("g-lieux", par.map(x => x[0]), par.map(x => x[1]), { total: N });
+  verifier("g-lieux", { titre: `Offres ${titre.toLowerCase()}`, base: sel, cles: par.map(x => x[0]), champ: "lieu",
+    cle: E.z.startsWith("dep:") ? o => o.ville || null : E.z.startsWith("reg:") ? o => o.dep ? libDep(o.dep) : null : o => o.reg || null,
+    valeur: o => `${o.ville || "—"} (${o.dep || "?"}) — ${o.reg || "région inconnue"}` });
   const sansLieu = sel.filter(o => !o.dep).length;
   lecture("l-lieux", par.length ? `<b>${esc(par[0][0])}</b> concentre ${pct(par[0][1], N)} % des offres (${nb(par[0][1])} sur ${nb(N)})`
     + (!E.z ? `, le Puy-de-Dôme en compte ${nb(sel.filter(o => o.dep === "63").length)}.` : ".")
@@ -385,6 +463,8 @@ function rendreContrat(sel) {
     document.getElementById("t-type").textContent = "Durée du stage";
     const v = DUREES.map(k => sel.filter(o => (o.duree_classe || DUREES.at(-1)) === k).length);
     anneau("g-type", DUREES, v, ["#a7c9ff", "#5f9bf5", "#0a5cff", "#123a7a", "#c7c7cc"]);
+    verifier("g-type", { titre: "Durée du stage", base: sel, cle: o => o.duree_classe || DUREES.at(-1), cles: DUREES, champ: "duree_classe",
+      valeur: o => o.duree != null ? `${o.duree_min != null && o.duree_min !== o.duree ? o.duree_min + " à " : ""}${o.duree} mois` : "non précisée" });
     const connus = N - v.at(-1), iMax = v.slice(0, -1).indexOf(Math.max(...v.slice(0, -1)));
     lecture("l-type", connus ? `quand l'annonce donne la durée (${pct(connus, N)} % des stages), c'est le plus souvent <b>${DUREES[iMax]}</b> : ${pct(v[iMax], connus)} % (${nb(v[iMax])} sur ${nb(connus)}). La durée est lue dans le titre et le texte (« 6 mois », « 4 à 6 mois ») : la plus longue est retenue.` : N ? "aucune annonce de la sélection ne précise la durée." : "");
   } else {
@@ -392,6 +472,7 @@ function rendreContrat(sel) {
     const cats = E.c === "tous" ? [...TYPES, "stage"] : TYPES;
     const t = cats.map(k => sel.filter(o => o.type === k).length);
     anneau("g-type", cats.map(k => k[0].toUpperCase() + k.slice(1)), t, cats.map(k => COUL_TYPE[k] || "#ff6a00"));
+    verifier("g-type", { titre: "Type de contrat", base: sel, cle: o => o.type, cles: cats, libelles: cats.map(k => k[0].toUpperCase() + k.slice(1)), champ: "type", valeur: o => o.type });
     lecture("l-type", N ? `${pct(t[0], N)} % des offres sont en apprentissage (${nb(t[0])} sur ${nb(N)}) et ${pct(t[1], N)} % en contrat de professionnalisation (${nb(t[1])})`
       + (E.c === "tous" ? ` ; ${pct(t[3], N)} % sont des stages (${nb(t[3])}).` : ".") : "");
   }
@@ -399,6 +480,8 @@ function rendreContrat(sel) {
   const dipl = [...D.diplomes, "Non précisé"];
   const vd = dipl.map(k => sel.filter(o => (o.diplome || "Non précisé") === k).length);
   barres("g-diplome", dipl, vd, { horizontal: false, total: N, couleurs: dipl.map(k => k === "Non précisé" ? "#c7c7cc" : "#0a5cff") });
+  verifier("g-diplome", { titre: "Diplôme préparé ou demandé", base: sel, cle: o => o.diplome || "Non précisé", cles: dipl, champ: "diplome",
+    valeur: o => o.diplome ? `${o.diplome} (${o.dipl_src === "champ" ? "champ de la source" : "lu dans le texte"})` : "—" });
   const connus = N - vd.at(-1);
   const iMax = vd.slice(0, -1).indexOf(Math.max(...vd.slice(0, -1)));
   const texte = sel.filter(o => o.dipl_src === "texte").length;
@@ -407,6 +490,9 @@ function rendreContrat(sel) {
   const avec = sel.filter(o => o.smin != null);
   const tr = [["< 600 €", 0, 600], ["600–899 €", 600, 900], ["900–1 199 €", 900, 1200], ["1 200–1 499 €", 1200, 1500], ["1 500–1 799 €", 1500, 1800], ["1 800 € et plus", 1800, 1e9]];
   barres("g-salaire", tr.map(x => x[0]), tr.map(([, a, b]) => avec.filter(o => o.smin >= a && o.smin < b).length), { horizontal: false, total: avec.length });
+  verifier("g-salaire", { titre: "Rémunération affichée (minimum, brut mensuel)", base: avec, cles: tr.map(x => x[0]), champ: "salaire",
+    cle: o => (tr.find(([, a, b]) => o.smin >= a && o.smin < b) || [])[0], total: avec.length, totalLibelle: "offres qui affichent une rémunération",
+    valeur: o => `${o.smin}${o.smax > o.smin ? "–" + o.smax : ""} €${o.sal_etat === "corrigé" ? " (corrigé)" : ""} — libellé : ${o.sal_lib || "—"}` });
   const corr = avec.filter(o => o.sal_etat === "corrigé").length;
   lecture("l-salaire", avec.length ? `${nb(avec.length)} offres sur ${nb(N)} (${pct(avec.length, N)} %) affichent une rémunération. Le minimum médian est de <b>${euro(mediane(avec.map(o => o.smin)))} brut par mois</b>, le maximum médian de ${euro(mediane(avec.map(o => o.smax)))}.`
     + (corr ? ` ${nb(corr)} montants saisis par erreur en « annuel » ont été lus comme mensuels.` : "") + (E.c === "stage" ? " Un stage de plus de 2 mois doit obligatoirement être gratifié (montant minimum fixé par la loi)." : " Pour un apprenti, le minimum légal dépend de l'âge et de l'année de contrat.") : "aucune offre de la sélection n'affiche de rémunération.");
@@ -414,6 +500,8 @@ function rendreContrat(sel) {
   const ta = [["< 7 jours", 0, 7], ["7–29 j", 7, 30], ["30–59 j", 30, 60], ["60–89 j", 60, 90], ["90 j et plus", 90, 1e9]];
   const va = ta.map(([, a, b]) => sel.filter(o => { const x = age(o); return x != null && x >= a && x < b; }).length);
   barres("g-age", ta.map(x => x[0]), va, { horizontal: false, total: N, couleurs: ["#0a5cff", "#0a5cff", "#5f9bf5", "#a7c9ff", "#c7c7cc"] });
+  verifier("g-age", { titre: "Ancienneté des annonces", base: sel, cles: ta.map(x => x[0]), champ: "age",
+    cle: o => { const x = age(o); return x == null ? null : (ta.find(([, a, b]) => x >= a && x < b) || [])[0]; }, valeur: o => `${age(o)} jours (publiée le ${dateFr(o.date)})` });
   lecture("l-age", N ? `${pct(va[0] + va[1], N)} % des offres ont moins de 30 jours ; ${pct(va[4], N)} % ont plus de 90 jours (${nb(va[4])}) : à vérifier avant de postuler, le poste est peut-être pourvu.` : "");
 }
 
@@ -423,23 +511,31 @@ function rendreRecruteurs(sel) {
   const cats = Object.keys(COUL_PUBLIE);
   const vp = cats.map(k => sel.filter(o => o.publie_par === k).length);
   anneau("g-publie", cats, vp, cats.map(k => COUL_PUBLIE[k]));
+  verifier("g-publie", { titre: "Qui publie l'offre", base: sel, cle: o => o.publie_par, cles: cats, champ: "publie_par",
+    valeur: o => `${o.ent || "—"}${o.naf ? " · NAF " + o.naf : ""}` });
   lecture("l-publie", !N ? "" : (vp[1] ? `${pct(vp[1], N)} % des offres sont publiées par des écoles ou organismes de formation (${nb(vp[1])} sur ${nb(N)}) : elles cherchent des élèves autant que des alternants. ` : (E.e !== "1" ? `les offres d'écoles sont masquées (${nb(ecolesMasquees())} dans cette sélection) : cochez « Afficher aussi les offres publiées par des écoles » pour les voir. ` : "aucune offre de la sélection n'est publiée par une école. "))
     + `${pct(vp[0], N)} % viennent directement d'une entreprise (${nb(vp[0])})${vp[3] ? `, ${pct(vp[3], N)} % n'indiquent pas l'employeur` : ""}.`);
 
   const cl = [...D.classes_effectif, "Inconnue"];
   const vt = cl.map(k => sel.filter(o => (o.eff || "Inconnue") === k).length);
   barres("g-taille", cl.map(k => k === "Inconnue" ? k : k + " salariés"), vt, { horizontal: false, total: N, couleurs: cl.map(k => k === "Inconnue" ? "#c7c7cc" : "#0a5cff") });
+  verifier("g-taille", { titre: "Taille de l'employeur", base: sel, cle: o => o.eff || "Inconnue", cles: cl, libelles: cl.map(k => k === "Inconnue" ? k : k + " salariés"), champ: "eff",
+    valeur: o => o.ent_off ? `${o.ent_off} (SIRENE${o.match < 1 ? ", correspondance approchée" : ""})` : (o.eff_lib ? `tranche France Travail : ${o.eff_lib}` : "—") });
   const connus = N - vt.at(-1), petites = vt[0] + vt[1] + vt[2];
   lecture("l-taille", connus ? `parmi les ${nb(connus)} offres dont l'employeur a une taille connue, ${pct(petites, connus)} % viennent de structures de moins de 50 salariés et ${pct(vt[4] + vt[5], connus)} % de 250 salariés et plus. Taille de l'unité légale (SIRENE), ou tranche de l'établissement donnée par France Travail.` : "taille inconnue pour toutes les offres de la sélection.");
 
   const sec = compter(sel, o => o.section ? D.sections[o.section] : null).slice(0, 10);
   const sansSec = sel.filter(o => !o.section).length;
   barres("g-secteurs", sec.map(x => x[0]), sec.map(x => x[1]), { total: N });
+  verifier("g-secteurs", { titre: "Secteur d'activité de l'employeur", base: sel, cle: o => o.section ? D.sections[o.section] : null, cles: sec.map(x => x[0]), champ: "section",
+    valeur: o => `NAF ${o.naf || "—"}${o.secteur ? " · " + o.secteur : ""}` });
   lecture("l-secteurs", sec.length ? `le premier secteur est <b>${esc(sec[0][0])}</b> : ${pluriel(sec[0][1], "offre")}, ${pct(sec[0][1], N - sansSec)} % de celles dont le secteur est connu (${pct(sansSec, N)} % ne le sont pas).` : "");
 
   const emp = compter(sel, o => o.ent || null).slice(0, 12);
   const estEcole = nom => sel.some(o => o.ent === nom && o.ecole);
   barres("g-employeurs", emp.map(x => x[0] + (estEcole(x[0]) ? " (école)" : "")), emp.map(x => x[1]), { total: N, couleurs: emp.map(x => estEcole(x[0]) ? "#ff6a00" : "#0a5cff") });
+  verifier("g-employeurs", { titre: "Les employeurs qui publient le plus", base: sel, cle: o => o.ent || null, cles: emp.map(x => x[0]),
+    libelles: emp.map(x => x[0] + (estEcole(x[0]) ? " (école)" : "")), champ: "publie_par", valeur: o => o.publie_par });
   lecture("l-employeurs", emp.length ? `le premier employeur, <b>${esc(emp[0][0])}</b>${estEcole(emp[0][0]) ? " (une école)" : ""}, publie ${pluriel(emp[0][1], "offre")}, soit ${pct(emp[0][1], N)} % de la sélection.` + (emp.length > 2 ? ` Les ${Math.min(12, emp.length)} premiers en publient ${pct(emp.reduce((a, x) => a + x[1], 0), N)} %.` : "") : "");
 }
 
@@ -448,6 +544,8 @@ function rendreOutils(sel) {
   const N = sel.length;
   const par = D.outils.map(nom => [nom, sel.filter(o => (o.outils || []).includes(nom)).length]).sort((a, b) => b[1] - a[1]);
   barres("g-outils", par.map(x => x[0]), par.map(x => pct(x[1], N)), { pourcent: true });
+  verifier("g-outils", { titre: "Outils et compétences cités", base: sel, cle: o => o.outils || [], cles: par.map(x => x[0]), champ: "outils",
+    note: "Une offre qui cite plusieurs outils est comptée dans chaque ligne : le total des parts dépasse donc 100 %.", valeur: o => (o.outils || []).join(", ") || "aucun" });
   const aucun = sel.filter(o => !(o.outils || []).length).length;
   lecture("l-outils", N ? `<b>${esc(par[0][0])}</b> est cité dans ${pct(par[0][1], N)} % des offres (${nb(par[0][1])}), ${esc(par[1][0])} dans ${pct(par[1][1], N)} %, ${esc(par[2][0])} dans ${pct(par[2][1], N)} %. ${pct(aucun, N)} % des annonces ne citent aucun outil de la grille (config/alternance.json).` : "");
 }
@@ -686,6 +784,8 @@ function brancher() {
      ...EP.lignes.map(x => [x.siren, x.nom, x.naf, sectionLib(x.naf) || "", x.eff, x.eff_ul, x.adresse, x.offre ? "oui" : "non", `https://annuaire-entreprises.data.gouv.fr/entreprise/${x.siren}`])]));
   // Une ancre simple (#fiabilite) n'est pas un état de filtres : on la laisse faire défiler la page.
   window.addEventListener("hashchange", () => { if (!location.hash.includes("=")) return; lireAdresse(); synchroniserFiltres(); rendre(); });
+  // « Vérifier ce calcul » sous chaque phrase de lecture : la répartition complète du graphique.
+  document.addEventListener("click", e => { const b = e.target.closest(".lien-verif[data-g]"); if (b) verifGraphique(b.dataset.g); });
 }
 
 /* ---- La carte, créée une fois ---- */
@@ -698,7 +798,7 @@ calque = L.markerClusterGroup({ maxClusterRadius: 45, disableClusteringAtZoom: 1
 document.querySelectorAll("[data-vue]").forEach(b => b.addEventListener("click", () => carte.flyTo(...VUES[b.dataset.vue])));
 
 const pc = D.qualite.par_contrat || {};
-document.getElementById("sous").innerHTML = `Offres actives au <b>${dateFr(D.date)}</b> : ${nb(pc.alternance || D.offres.length)} en alternance, ${nb(pc.stage || 0)} stages, après nettoyage (${nb(D.qualite.brutes)} lues) · sources : ${esc(D.qualite.sources.filter(x => x.n).map(x => x.source).join(", "))} · croisées avec l'API Recherche d'entreprises · <a href="#fiabilite">fiabilité</a>`;
+document.getElementById("sous").innerHTML = `Offres actives au <b>${dateFr(D.date)}</b> : ${nb(pc.alternance || D.offres.length)} en alternance, ${nb(pc.stage || 0)} stages, après nettoyage (${nb(D.qualite.brutes)} lues). Sources : ${esc([...new Set(D.qualite.sources.filter(x => x.n && SOURCES[x.source.split(" ")[0]]).map(x => SOURCES[x.source.split(" ")[0]]))].join(", "))}, croisées avec le répertoire des entreprises. <a href="#fiabilite">Méthode et contrôles</a>.`;
 lireAdresse();
 poserFiltres();
 synchroniserFiltres();
