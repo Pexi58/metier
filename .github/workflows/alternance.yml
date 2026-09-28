@@ -1,7 +1,7 @@
 # La veille alternance et stages : chaque matin, après la veille France Travail (veille.yml, 5 h UTC),
 # GitHub relance scripts/alternance.mjs et enregistre les données par un commit.
 # Clés dans Settings -> Secrets and variables -> Actions :
-# FT_CLIENT_ID, FT_CLIENT_SECRET, LBA_API_KEY, ADZUNA_APP_ID, ADZUNA_APP_KEY (et JOOBLE_API_KEY si vous l'avez).
+# FT_CLIENT_ID, FT_CLIENT_SECRET, LBA_API_KEY, ADZUNA_APP_ID, ADZUNA_APP_KEY.
 name: alternance
 
 on:
@@ -31,7 +31,6 @@ jobs:
           LBA_API_KEY: ${{ secrets.LBA_API_KEY }}
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
-          JOOBLE_API_KEY: ${{ secrets.JOOBLE_API_KEY }}
         # Code 2 = un contrôle a échoué : on publie quand même, la page l'affiche dans « Fiabilité ».
         run: node scripts/alternance.mjs || [ $? -eq 2 ]
 

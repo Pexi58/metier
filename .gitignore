@@ -6,4 +6,3 @@ __pycache__/
 
 # Veille alternance : résultats du jour des agrégateurs (gardés en local seulement)
 data/alternance-cache/adzuna-*.json
-data/alternance-cache/jooble-*.json

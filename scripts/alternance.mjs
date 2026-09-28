@@ -55,7 +55,7 @@ const cle = nom => { const v = process.env[nom]; return v && !/^(PAR_votre|votre
 
 const CONFIG = JSON.parse(fs.readFileSync(path.join(RACINE, "config", "alternance.json"), "utf8"));
 const METIERS = new Map(CONFIG.metiers.map(m => [m.code, m]));
-const ORDRE_SOURCES = ["FT", "LBA", "ADZ", "JOO"];
+const ORDRE_SOURCES = ["FT", "LBA", "ADZ"];
 
 const lireJson = (f, defaut) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return defaut; } };
 const ecrireJson = (f, v) => fs.writeFileSync(f, JSON.stringify(v), "utf8");
@@ -218,22 +218,6 @@ function dureeStage(texte) {
   return { dmin: null, dmax: null };
 }
 const classeDuree = dmax => dmax == null ? CLASSES_DUREE[4] : dmax <= 2 ? CLASSES_DUREE[0] : dmax <= 4 ? CLASSES_DUREE[1] : dmax <= 6 ? CLASSES_DUREE[2] : CLASSES_DUREE[3];
-
-/* ---- Position d'une ville donnée par son seul nom (Jooble) : geo.api.gouv.fr, avec cache. ---- */
-const VILLES = { cache: null };
-async function geoVille(nom) {
-  if (!VILLES.cache) VILLES.cache = lireJson(path.join(CACHE, "villes.json"), {});
-  const k = norm(String(nom || "").split(",")[0].replace(/\(\d+\)/g, ""));
-  if (!k) return null;
-  if (k in VILLES.cache) return VILLES.cache[k];
-  if (HORS_LIGNE) return null;
-  try {
-    const r = await http(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(k)}&fields=departement,centre&boost=population&limit=1`);
-    const d = r.ok ? await r.json() : [];
-    VILLES.cache[k] = d[0] ? { dep: d[0].departement.code, lat: d[0].centre.coordinates[1], lon: d[0].centre.coordinates[0] } : null;
-  } catch { VILLES.cache[k] = null; }
-  return VILLES.cache[k];
-}
 
 /* ---- Employeur : école ? intermédiaire ? ---- */
 // Noms qui trahissent une école ou un groupe de formation (liste à compléter si vous en repérez d'autres).
@@ -489,7 +473,7 @@ function mensuelAdzuna(v) {
   return { v: v / 12, corrige: false };
 }
 
-/* Une offre « annonce d'agrégateur » (Adzuna, Jooble) mise au format commun. */
+/* Une offre d'agrégateur (Adzuna) mise au format commun. */
 function offreAgregateur({ id, src, via, rome, contrat, titre, desc, ent, lieu, ville, dep, lat, lon, date, url, sal }) {
   const texte = `${titre} ${desc}`;
   const d = contrat === "stage" ? dureeStage(texte) : { dmin: null, dmax: null };
@@ -579,54 +563,6 @@ async function sourceAdzuna(journal) {
   }
   journal.push({ source: "ADZ", n: toutes.length, statut: statuts.join(" ; ") + " ; métier déduit du titre" });
   return toutes;
-}
-
-/* ============================================================
-   4 bis) SOURCE JOO : Jooble (agrégateur, API gratuite sur demande : fr.jooble.org/api/about)
-   ============================================================ */
-async function sourceJooble(journal) {
-  const k = cle("JOOBLE_API_KEY");
-  if (!k || HORS_LIGNE) { journal.push({ source: "JOO", statut: HORS_LIGNE ? "hors ligne" : "pas de clé JOOBLE_API_KEY (gratuite sur fr.jooble.org/api/about)", n: 0 }); return []; }
-  const aujourdhui = new Date().toISOString().slice(0, 10);
-  const fCache = path.join(CACHE, `jooble-${aujourdhui}.json`);
-  const cache = lireJson(fCache, null);
-  if (cache) { journal.push({ source: "JOO", n: cache.offres.length, statut: "résultat du jour, en cache" }); return cache.offres; }
-  const offres = [], vus = new Set(), erreurs = [];
-  let appels = 0;
-  for (const contrat of ["alternance", "stage"]) for (const m of CONFIG.metiers) for (const where of ["France", REGION ? REGION.nom : null].filter(Boolean)) {
-    for (let page = 1; page <= 3; page++) {
-      let d;
-      appels++;
-      try {
-        const r = await http(`https://jooble.org/api/${k}`, { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ keywords: `${m.mots_cles || m.libelle} ${contrat}`, location: where, page: String(page) }) });
-        if (!r.ok) { erreurs.push(`${m.code} ${contrat} : ${r.status}`); if (r.status === 403 || r.status === 401) { journal.push({ source: "JOO", n: 0, statut: `clé refusée (${r.status})` }); return []; } break; }
-        d = await r.json();
-      } catch (e) { erreurs.push(`${m.code} : ${e.message}`); break; }
-      await pause(700);
-      const lot = d.jobs || [];
-      for (const j of lot) {
-        const titre = texteBrut(j.title), desc = texteBrut(j.snippet);
-        if (vus.has(j.id) || !garderSelonContrat(contrat, `${titre} ${desc} ${j.type || ""}`)) continue;
-        vus.add(j.id);
-        const g = await geoVille(j.location);
-        offres.push(offreAgregateur({
-          id: "JOO-" + j.id, src: "JOO", via: j.source ? `Jooble (${j.source})` : "Jooble", rome: romeDepuisTitre(titre) || m.code, contrat, titre, desc,
-          ent: j.company || "", lieu: j.location || "", ville: String(j.location || "").split(",")[0], dep: g ? g.dep : "",
-          lat: g ? g.lat : null, lon: g ? g.lon : null, date: String(j.updated || "").slice(0, 10), url: j.link || "", sal: null,
-        }));
-        if (g) offres.at(-1).prec = "commune";
-      }
-      if (lot.length < 20) break;
-    }
-  }
-  ecrireJson(path.join(CACHE, "villes.json"), VILLES.cache || {});
-  journal.push({ source: "JOO", n: offres.length, statut: `${appels} appels ; métier déduit du titre` + (erreurs.length ? ` ; ${erreurs.length} erreurs (ex. ${erreurs[0]})` : "") });
-  if (!erreurs.length) {
-    for (const f of fs.readdirSync(CACHE).filter(f => /^jooble-.*\.json$/.test(f))) fs.unlinkSync(path.join(CACHE, f));
-    ecrireJson(fCache, { offres });
-  }
-  return offres;
 }
 
 /* ============================================================
@@ -818,14 +754,13 @@ async function main() {
   const nFTdepot = journal[0] && journal[0].source === "FT" ? journal[0].n : null;
   const lba = await sourceLBA(journal);
   const adz = await sourceAdzuna(journal);
-  const joo = await sourceJooble(journal);
-  const brutes = [...ft.offres, ...lba.offres, ...adz, ...joo];
+  const brutes = [...ft.offres, ...lba.offres, ...adz];
   // France Travail et La bonne alternance ne donnent ici que des alternances.
   for (const o of brutes) if (!o.contrat) o.contrat = "alternance";
   // Les agrégateurs cherchent aussi dans le texte : « stage marketing » ramène des stages d'ingénieur qui citent
   // le mot une fois. On ne garde que les offres dont le TITRE correspond à un métier suivi ou à son vocabulaire.
   const RX_VOCABULAIRE = /\b(marketing|communication|com|commercial|commerciale|commerce|digital|digitale|numerique|web|produit|produits|brand|marque|ecommerce|social|media|medias|seo|sea|crm|client|clients|clientele|evenementiel|evenement|evenements|merchandising|publicite|pub|influence|influenceur|contenu|contenus|redaction|redacteur|etudes|trade|vente|ventes|acquisition|growth|community|presse|influencer|influenceurs|ugc|traffic|trafic|content|brand|copywriter|graphiste|design|designer|social media|ads|sem|ecommerce|retail|categorie|category|partenariats?|campagnes?|business developer|chef de projet)\b/;
-  const pertinente = o => (o.src !== "ADZ" && o.src !== "JOO") || romeDepuisTitre(o.titre) || RX_VOCABULAIRE.test(norm(o.titre));
+  const pertinente = o => o.src !== "ADZ" || romeDepuisTitre(o.titre) || RX_VOCABULAIRE.test(norm(o.titre));
   const horsSujet = brutes.filter(o => !pertinente(o));
   for (let i = brutes.length - 1; i >= 0; i--) if (!pertinente(brutes[i])) brutes.splice(i, 1);
   journal.push({ source: "Filtre", n: horsSujet.length, statut: `offres d'agrégateurs écartées car leur titre ne correspond à aucun métier suivi (ex. ${horsSujet.slice(0, 3).map(o => `« ${o.titre} »`).join(", ")})` });
@@ -859,7 +794,7 @@ async function main() {
   }
 
   // Date de référence : aujourd'hui si une source a été interrogée en direct, sinon le jour de l'extraction du dépôt.
-  const direct = lba.offres.length || adz.length || joo.length || journal.some(s => /API en direct/.test(s.source) && s.n);
+  const direct = lba.offres.length || adz.length || journal.some(s => /API en direct/.test(s.source) && s.n);
   const jourRef = direct || !ft.jour ? new Date().toISOString().slice(0, 10) : ft.jour;
   const age = d => (Date.parse(jourRef) - Date.parse(d)) / 86400000;
   const controles = controler(offres, { jour: ft.jour, jourRef, nFTdepot });

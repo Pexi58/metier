@@ -103,7 +103,7 @@ function rendre() {
   const nEcoles = toutes.filter(o => o.ecole).length;
   const F = decrireFiltres();
   const fragile = n => n < PETIT ? ` <i>(moins de ${PETIT} offres : chiffre à citer avec prudence)</i>` : "";
-  const noms = { FT: "France Travail", LBA: "La bonne alternance", ADZ: "Adzuna", JOO: "Jooble" };
+  const noms = { FT: "France Travail", LBA: "La bonne alternance", ADZ: "Adzuna" };
   const sources = [...new Set(D.qualite.sources.filter(x => x.n > 0).map(x => noms[x.source.split(" ")[0]]).filter(Boolean))];
   const lSource = `Sources : ${sources.join(", ")} — offres en ligne le ${dateFr(D.date)}, dédoublonnées${ecoles ? "" : ", hors offres d'écoles"}.`;
   document.querySelectorAll(".nom-region, .nom-region-lien").forEach(e => { e.textContent = REG.nom; });

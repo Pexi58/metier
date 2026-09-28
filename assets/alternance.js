@@ -45,7 +45,7 @@ const METIER = Object.fromEntries(D.metiers.map(m => [m.code, m]));
 const COUL_GROUPE = { Marketing: "#0a5cff", Digital: "#ff6a00", Frontière: "#8e8e93" };
 const COUL_PUBLIE = { "Entreprise": "#0a5cff", "École / organisme de formation": "#ff6a00", "Intérim / cabinet de recrutement": "#8e8e93", "Non précisé": "#c7c7cc" };
 const COUL_TYPE = { apprentissage: "#0a5cff", professionnalisation: "#5f9bf5", "non précisé": "#c7c7cc" };
-const SOURCES = { FT: "France Travail", LBA: "La bonne alternance", ADZ: "Adzuna", JOO: "Jooble" };
+const SOURCES = { FT: "France Travail", LBA: "La bonne alternance", ADZ: "Adzuna" };
 const TYPES = ["apprentissage", "professionnalisation", "non précisé"];
 const AURA = "Auvergne-Rhône-Alpes", IDF = "Île-de-France";
 const EFFECTIFS = { NN: "Non renseigné", "00": "0 salarié", "01": "1 ou 2 salariés", "02": "3 à 5 salariés", "03": "6 à 9 salariés", 11: "10 à 19 salariés", 12: "20 à 49 salariés", 21: "50 à 99 salariés", 22: "100 à 199 salariés", 31: "200 à 249 salariés", 32: "250 à 499 salariés", 41: "500 à 999 salariés", 42: "1 000 à 1 999 salariés", 51: "2 000 à 4 999 salariés", 52: "5 000 à 9 999 salariés", 53: "10 000 salariés et plus" };

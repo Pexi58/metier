@@ -24,14 +24,13 @@ const Verif = (() => {
     FT: ["France Travail", "API Offres d'emploi v2", "https://francetravail.io/data/api/offres-emploi"],
     LBA: ["La bonne alternance", "API officielle de l'alternance", "https://api.apprentissage.beta.gouv.fr/fr/explorer"],
     ADZ: ["Adzuna", "API d'un agrégateur d'offres", "https://developer.adzuna.com/"],
-    JOO: ["Jooble", "API d'un agrégateur d'offres", "https://jooble.org/api/about"],
   };
   // Pour chaque champ : ce qu'il veut dire et comment il est obtenu (voir scripts/alternance.mjs).
   const CHAMPS = {
-    contrat: "Alternance ou stage. France Travail et La bonne alternance : offres cherchées avec le filtre « apprentissage / professionnalisation ». Adzuna et Jooble : recherche « métier + alternance » ou « métier + stage », puis le mot doit figurer dans le titre ou le texte.",
-    type: "Type de contrat. France Travail : champ natureContrat (« Contrat apprentissage », « Cont. professionnalisation »). La bonne alternance : champ contract.type. Adzuna / Jooble : lu dans le texte ; « non précisé » si le texte ne le dit pas.",
+    contrat: "Alternance ou stage. France Travail et La bonne alternance : offres cherchées avec le filtre « apprentissage / professionnalisation ». Adzuna : recherche « métier + alternance » ou « métier + stage », puis le mot doit figurer dans le titre ou le texte.",
+    type: "Type de contrat. France Travail : champ natureContrat (« Contrat apprentissage », « Cont. professionnalisation »). La bonne alternance : champ contract.type. Adzuna : lu dans le texte ; « non précisé » si le texte ne le dit pas.",
     duree_classe: "Durée du stage, lue dans le titre et le texte de l'annonce (« 6 mois », « 4 à 6 mois », « 8 semaines ») ; si une fourchette est donnée, c'est la plus longue qui est retenue. « Non précisée » quand le texte n'en parle pas (Adzuna ne donne que le début de l'annonce).",
-    lieu: "Lieu. France Travail : code commune INSEE de l'offre. La bonne alternance : code postal de l'adresse. Adzuna : nom du département renvoyé par l'API. Jooble : nom de la ville, retrouvé sur geo.api.gouv.fr. La région se déduit du département.",
+    lieu: "Lieu. France Travail : code commune INSEE de l'offre. La bonne alternance : code postal de l'adresse. Adzuna : nom du département renvoyé par l'API. La région se déduit du département.",
     diplome: "Diplôme. Champ de la source quand il existe (France Travail : formations, La bonne alternance : target_diploma), sinon lu dans le texte (« Bac+2 », « BTS », « Bachelor », « Master »…) : c'est le plus haut niveau mentionné qui est retenu.",
     publie_par: "Qui publie. « École » : activité d'enseignement (code NAF 85, répertoire SIRENE) ou nom d'école connu. « Intérim / cabinet » : code NAF 78 ou nom connu (Randstad, Direct Emploi…). « Entreprise » : tout autre employeur nommé. « Non précisé » : l'annonce ne nomme pas l'employeur.",
     eff: "Taille de l'employeur : tranche d'effectif de l'entreprise dans le répertoire SIRENE (API Recherche d'entreprises), retrouvée par le nom et le département de l'offre ; à défaut, tranche donnée par France Travail.",
@@ -39,7 +38,7 @@ const Verif = (() => {
     outils: "Outils cités : mots cherchés dans le titre et le texte de l'annonce (mot entier), selon la grille de config/alternance.json. Une offre peut en citer plusieurs.",
     salaire: "Salaire : libellé de la source ramené en brut mensuel. Un montant mensuel saisi dans la case « annuel » est corrigé ; les montants hors 300–6 000 € sont écartés ; les salaires estimés par Adzuna ne sont pas repris.",
     age: "Ancienneté : écart entre la date de publication de l'annonce et la date de la collecte.",
-    rome: "Métier : code ROME donné par la source (France Travail, La bonne alternance) ; pour Adzuna et Jooble, déduit du titre (tous les mots-clés du métier doivent y figurer), sinon métier de la recherche.",
+    rome: "Métier : code ROME donné par la source (France Travail, La bonne alternance) ; pour Adzuna, déduit du titre (tous les mots-clés du métier doivent y figurer), sinon métier de la recherche.",
     ecole: "École : employeur dont l'activité est l'enseignement (NAF 85) ou dont le nom est celui d'une école connue.",
     recruteur: "Entreprise « susceptible de recruter en alternance » : sélection de l'algorithme de La bonne alternance (d'après les embauches passées), gardée seulement si elle est dans le rayon demandé et dans la région.",
   };

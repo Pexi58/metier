@@ -52,7 +52,7 @@ const Site = (() => {
     const el = document.getElementById("pied");
     if (!el) return;
     el.outerHTML = `<footer class="pied">
-      Sources : France Travail, La bonne alternance, Adzuna (et Jooble si la clé est fournie), croisées avec le répertoire des entreprises (API Recherche d'entreprises).
+      Sources : France Travail, La bonne alternance, Adzuna, croisées avec le répertoire des entreprises (API Recherche d'entreprises).
       Collecte, nettoyage et contrôles : <code>scripts/alternance.mjs</code>, relancé chaque matin par GitHub Actions.
       Chaque chiffre est cliquable pour voir son calcul et les offres comptées. <a href="alternance.html#fiabilite">Méthode, contrôles et limites</a>.
       Pas de scraping de LinkedIn, Indeed ou APEC (interdit par leurs conditions d'utilisation).
@@ -74,7 +74,7 @@ const Site = (() => {
     esc, nb, pct, dateFr, lireChoix, memoriser,
     libDep: code => (D.departements || {})[code] ? `${D.departements[code]} (${code})` : "département " + code,
     villeSimple: v => String(v || "").replace(/\s+\d+(er|e|ème)?\s+(arrondissement|canton)$/i, "").trim(),
-    SOURCES: { FT: "France Travail", LBA: "La bonne alternance", ADZ: "Adzuna", JOO: "Jooble" },
+    SOURCES: { FT: "France Travail", LBA: "La bonne alternance", ADZ: "Adzuna" },
   };
 })();
 // Rendu visible de tous les scripts de la page.
