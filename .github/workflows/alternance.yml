@@ -1,13 +1,13 @@
-# La veille alternance : chaque matin, après la veille France Travail (veille.yml, 5 h UTC),
-# GitHub relance scripts/alternance.mjs et enregistre data/alternance.json par un commit.
-# Clés facultatives dans Settings -> Secrets and variables -> Actions :
-# FT_CLIENT_ID, FT_CLIENT_SECRET (déjà là pour veille.yml), LBA_API_KEY, ADZUNA_APP_ID, ADZUNA_APP_KEY.
+# La veille alternance et stages : chaque matin, après la veille France Travail (veille.yml, 5 h UTC),
+# GitHub relance scripts/alternance.mjs et enregistre les données par un commit.
+# Clés dans Settings -> Secrets and variables -> Actions :
+# FT_CLIENT_ID, FT_CLIENT_SECRET, LBA_API_KEY, ADZUNA_APP_ID, ADZUNA_APP_KEY (et JOOBLE_API_KEY si vous l'avez).
 name: alternance
 
 on:
   schedule:
     - cron: "40 5 * * *"      # 40 minutes après veille.yml
-  workflow_dispatch:
+  workflow_dispatch:           # et le bouton « Run workflow » pour lancer à la main
 
 permissions:
   contents: write
@@ -16,11 +16,11 @@ jobs:
   alternance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Sources, nettoyage, croisement, contrôles
         env:
@@ -33,11 +33,14 @@ jobs:
         # Code 2 = un contrôle a échoué : on publie quand même, la page l'affiche dans « Fiabilité ».
         run: node scripts/alternance.mjs || [ $? -eq 2 ]
 
-      - name: Enregistrer (commit + push)
+      - name: Enregistrer (commit, puis récupération de la veille du jour, puis envoi)
+        # L'ordre compte : on enregistre d'abord nos données (sinon git refuse de récupérer),
+        # puis on récupère ce que veille.yml a pu enregistrer pendant ce temps, puis on envoie.
+        # Les deux veilles n'écrivent pas les mêmes fichiers : pas de conflit possible.
         run: |
           git config user.name "veille-bot"
           git config user.email "actions@github.com"
-          git pull --rebase
           git add data
           git commit -m "alternance : offres du $(date -u +%Y-%m-%d)" || echo "rien de nouveau"
+          git pull --rebase
           git push
