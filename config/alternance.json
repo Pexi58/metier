@@ -1,0 +1,92 @@
+{
+  "_aide": [
+    "Configuration de la veille alternance (scripts/alternance.mjs et alternance.html).",
+    "Pour suivre un autre métier : ajoutez une ligne dans « metiers » (code ROME + libellé + groupe + mots-clés),",
+    "puis relancez  node scripts/alternance.mjs . Sur la page, le métier se choisit dans la liste : rien d'autre à changer.",
+    "Les codes ROME se trouvent sur https://candidat.francetravail.fr/metierscope (fiche métier -> code).",
+    "« mots_cles » sert aux sources qui ne connaissent pas les codes ROME (Adzuna) : quelques mots, comme on les tape dans un moteur.",
+    "Les 23 premiers métiers sont ceux du dépôt du cours (scripts/extraire.py, METIERS) : leurs offres France Travail sont déjà dans data/."
+  ],
+  "metier_par_defaut": "M1620",
+  "_aide_region": [
+    "La région suivie de près. Pour elle, le script fait des recherches EN PLUS de la recherche nationale :",
+    "La bonne alternance autour de chaque ville-centre (rayon en km ; au-delà de 60 km l'API répond trop lentement),",
+    "et Adzuna avec le nom de la région (champ « adzuna »). Les villes-centres couvrent les 12 départements."
+  ],
+  "region_suivie": {
+    "nom": "Auvergne-Rhône-Alpes",
+    "adzuna": "Auvergne-Rhône-Alpes",
+    "rayon_km": 60,
+    "centres": [
+      { "ville": "Clermont-Ferrand", "lat": 45.7797, "lon": 3.0863 },
+      { "ville": "Vichy", "lat": 46.1277, "lon": 3.4262 },
+      { "ville": "Montluçon", "lat": 46.3401, "lon": 2.6025 },
+      { "ville": "Aurillac", "lat": 44.9264, "lon": 2.4397 },
+      { "ville": "Le Puy-en-Velay", "lat": 45.0434, "lon": 3.8858 },
+      { "ville": "Lyon", "lat": 45.764, "lon": 4.8357 },
+      { "ville": "Saint-Étienne", "lat": 45.4397, "lon": 4.3872 },
+      { "ville": "Bourg-en-Bresse", "lat": 46.2052, "lon": 5.2255 },
+      { "ville": "Grenoble", "lat": 45.188, "lon": 5.724 },
+      { "ville": "Valence", "lat": 44.9334, "lon": 4.8924 },
+      { "ville": "Aubenas", "lat": 44.6197, "lon": 4.3903 },
+      { "ville": "Chambéry", "lat": 45.5646, "lon": 5.9178 },
+      { "ville": "Annecy", "lat": 45.8992, "lon": 6.1294 }
+    ]
+  },
+  "zone_par_defaut": "",
+  "metiers": [
+    { "code": "M1718", "libelle": "Chargé(e) de marketing digital", "groupe": "Marketing", "mots_cles": "marketing digital" },
+    { "code": "M1716", "libelle": "Directeur(trice) marketing digital", "groupe": "Marketing", "mots_cles": "responsable marketing digital" },
+    { "code": "M1705", "libelle": "Responsable marketing", "groupe": "Marketing", "mots_cles": "chargé marketing" },
+    { "code": "M1703", "libelle": "Chef(fe) de produit", "groupe": "Marketing", "mots_cles": "chef de produit" },
+    { "code": "M1620", "libelle": "Assistant(e) marketing", "groupe": "Marketing", "mots_cles": "assistant marketing" },
+    { "code": "M1706", "libelle": "Chef(fe) de promotion des ventes", "groupe": "Marketing", "mots_cles": "trade marketing" },
+    { "code": "M1430", "libelle": "Chargé(e) d'études commerciales", "groupe": "Marketing", "mots_cles": "chargé d'études marketing" },
+    { "code": "M1711", "libelle": "Directeur(trice) du marketing", "groupe": "Marketing", "mots_cles": "directeur marketing" },
+    { "code": "E1113", "libelle": "Responsable e-commerce", "groupe": "Digital", "mots_cles": "e-commerce" },
+    { "code": "D1438", "libelle": "Assistant(e) e-commerce", "groupe": "Digital", "mots_cles": "assistant e-commerce" },
+    { "code": "E1101", "libelle": "Community manager", "groupe": "Digital", "mots_cles": "community manager" },
+    { "code": "E1124", "libelle": "Social media manager", "groupe": "Digital", "mots_cles": "social media" },
+    { "code": "E1405", "libelle": "Référenceur(se) web (SEO)", "groupe": "Digital", "mots_cles": "SEO référencement" },
+    { "code": "M1886", "libelle": "Chef(fe) de projet web", "groupe": "Digital", "mots_cles": "chef de projet web" },
+    { "code": "M1426", "libelle": "Chief digital officer", "groupe": "Digital", "mots_cles": "transformation digitale" },
+    { "code": "M1719", "libelle": "Chargé(e) des relations avec les influenceurs", "groupe": "Digital", "mots_cles": "influence marketing" },
+    { "code": "E1406", "libelle": "Influenceur(se) web", "groupe": "Digital", "mots_cles": "influenceur" },
+    { "code": "E1112", "libelle": "Chargé(e) de communication", "groupe": "Frontière", "mots_cles": "chargé de communication" },
+    { "code": "E1103", "libelle": "Chargé(e) des relations publiques", "groupe": "Frontière", "mots_cles": "relations publiques" },
+    { "code": "E1107", "libelle": "Chef(fe) de projet événementiel", "groupe": "Frontière", "mots_cles": "événementiel" },
+    { "code": "E1404", "libelle": "Assistant(e) en publicité", "groupe": "Frontière", "mots_cles": "assistant publicité" },
+    { "code": "D1506", "libelle": "Chargé(e) de merchandising", "groupe": "Frontière", "mots_cles": "merchandising" },
+    { "code": "D1415", "libelle": "Chargé(e) de relation client (CRM)", "groupe": "Frontière", "mots_cles": "relation client CRM" }
+  ],
+  "_aide_naf": "Activités (codes NAF) des entreprises proposées dans « Entreprises à démarcher », par groupe de métiers.",
+  "naf_par_groupe": {
+    "Marketing": ["73.11Z", "73.12Z", "73.20Z", "70.21Z", "70.22Z", "46.90Z", "47.91A", "47.91B"],
+    "Digital": ["62.01Z", "62.02A", "63.12Z", "73.11Z", "47.91A", "47.91B", "58.29C"],
+    "Frontière": ["70.21Z", "73.11Z", "82.30Z", "59.11B", "90.01Z", "47.19B"]
+  },
+  "_aide_outils": "Outils et compétences cherchés dans le texte des annonces (mot entier, sans tenir compte des majuscules). Reprise de la grille de scripts/resumer.py.",
+  "outils": {
+    "SEO": ["seo", "référencement naturel"],
+    "SEA / Google Ads": ["sea", "google ads", "adwords"],
+    "Meta Ads": ["meta ads", "facebook ads", "instagram ads"],
+    "Google Analytics": ["google analytics", "ga4"],
+    "HubSpot": ["hubspot"],
+    "CRM / Salesforce": ["crm", "salesforce"],
+    "Emailing": ["emailing", "e-mailing", "newsletter", "mailchimp", "brevo", "sendinblue"],
+    "Réseaux sociaux": ["réseaux sociaux", "social media", "community management", "instagram", "tiktok"],
+    "LinkedIn": ["linkedin"],
+    "WordPress": ["wordpress"],
+    "Shopify / e-commerce": ["shopify", "prestashop", "e-commerce", "ecommerce"],
+    "Canva": ["canva"],
+    "Suite Adobe": ["photoshop", "illustrator", "indesign", "adobe", "premiere pro"],
+    "Excel": ["excel"],
+    "Power BI / Looker": ["power bi", "looker", "data studio"],
+    "SQL / Python": ["sql", "python"],
+    "Marketing automation": ["marketing automation", "automatisation", "zapier", "n8n"],
+    "IA générative": ["intelligence artificielle", "chatgpt", "ia générative", "genai", "llm", "ia"],
+    "Anglais": ["anglais", "english"],
+    "Événementiel / salons": ["salon", "salons", "événementiel", "evenementiel"],
+    "Rédaction / contenu": ["rédaction", "rédactionnel", "copywriting", "contenus"]
+  }
+}

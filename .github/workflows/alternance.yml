@@ -1,0 +1,43 @@
+# La veille alternance : chaque matin, après la veille France Travail (veille.yml, 5 h UTC),
+# GitHub relance scripts/alternance.mjs et enregistre data/alternance.json par un commit.
+# Clés facultatives dans Settings -> Secrets and variables -> Actions :
+# FT_CLIENT_ID, FT_CLIENT_SECRET (déjà là pour veille.yml), LBA_API_KEY, ADZUNA_APP_ID, ADZUNA_APP_KEY.
+name: alternance
+
+on:
+  schedule:
+    - cron: "40 5 * * *"      # 40 minutes après veille.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  alternance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Sources, nettoyage, croisement, contrôles
+        env:
+          FT_CLIENT_ID: ${{ secrets.FT_CLIENT_ID }}
+          FT_CLIENT_SECRET: ${{ secrets.FT_CLIENT_SECRET }}
+          LBA_API_KEY: ${{ secrets.LBA_API_KEY }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          JOOBLE_API_KEY: ${{ secrets.JOOBLE_API_KEY }}
+        # Code 2 = un contrôle a échoué : on publie quand même, la page l'affiche dans « Fiabilité ».
+        run: node scripts/alternance.mjs || [ $? -eq 2 ]
+
+      - name: Enregistrer (commit + push)
+        run: |
+          git config user.name "veille-bot"
+          git config user.email "actions@github.com"
+          git pull --rebase
+          git add data
+          git commit -m "alternance : offres du $(date -u +%Y-%m-%d)" || echo "rien de nouveau"
+          git push

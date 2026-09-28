@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Présentation — l'alternance dans mon métier</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="assets/presentation.css?v=1">
+</head>
+<body>
+<!-- Barre de réglage : masquée à l'impression -->
+<header class="reglages">
+  <a href="alternance.html" class="retour">← Page complète</a>
+  <label>Offres <select id="p-contrat"><option value="alternance">Alternance</option><option value="stage">Stage</option><option value="tous">Alternance et stage</option></select></label>
+  <label>Métier <select id="p-metier"></select></label>
+  <label><input type="checkbox" id="p-ecoles"> Inclure les offres d'écoles</label>
+  <span class="aide">Flèches ← → ou molette pour passer d'une diapo à l'autre</span>
+  <button id="p-imprimer">Imprimer / PDF</button>
+</header>
+
+<main id="diapos">
+  <!-- 0. Titre -->
+  <section class="diapo titre">
+    <p class="surtitre">Analyse de données — M1 Marketing — TD 1</p>
+    <h1 id="t-titre">L'alternance</h1>
+    <p class="grand" id="t-sous"></p>
+    <p class="source" id="t-sources"></p>
+  </section>
+
+  <!-- 1. Combien -->
+  <section class="diapo">
+    <h2 id="h-combien">1. Combien d'offres en alternance ?</h2>
+    <div class="nombres" id="n-nombres"></div>
+    <p class="retenir" id="r-combien"></p>
+    <div class="zone"><canvas id="g-combien"></canvas></div>
+    <p class="source" id="s-combien"></p>
+  </section>
+
+  <!-- 2. Où en France -->
+  <section class="diapo">
+    <h2>2. Où sont-elles en France ?</h2>
+    <p class="retenir" id="r-france"></p>
+    <div class="zone"><canvas id="g-france"></canvas></div>
+    <p class="source" id="s-france"></p>
+  </section>
+
+  <!-- 3. Zoom région -->
+  <section class="diapo">
+    <h2>3. Et en <span class="nom-region">Auvergne-Rhône-Alpes</span> ?</h2>
+    <p class="retenir" id="r-region"></p>
+    <div class="deux">
+      <div class="zone"><canvas id="g-region"></canvas></div>
+      <div class="zone"><canvas id="g-villes"></canvas></div>
+    </div>
+    <p class="source" id="s-region"></p>
+  </section>
+
+  <!-- 4. Contrat -->
+  <section class="diapo">
+    <h2 id="h-contrat">4. Quel contrat, quel niveau d'études ?</h2>
+    <p class="retenir" id="r-contrat"></p>
+    <div class="deux">
+      <div class="zone"><canvas id="g-type"></canvas></div>
+      <div class="zone"><canvas id="g-diplome"></canvas></div>
+    </div>
+    <p class="source" id="s-contrat"></p>
+  </section>
+
+  <!-- 5. Qui recrute -->
+  <section class="diapo">
+    <h2>5. Qui recrute ?</h2>
+    <p class="retenir" id="r-qui"></p>
+    <div class="deux">
+      <div class="zone"><canvas id="g-taille"></canvas></div>
+      <div class="zone"><canvas id="g-secteur"></canvas></div>
+    </div>
+    <p class="source" id="s-qui"></p>
+  </section>
+
+  <!-- 6. Compétences -->
+  <section class="diapo">
+    <h2>6. Qu'est-ce qu'on nous demande ?</h2>
+    <p class="retenir" id="r-outils"></p>
+    <div class="zone haute"><canvas id="g-outils"></canvas></div>
+    <p class="source" id="s-outils"></p>
+  </section>
+
+  <!-- 7. Salaire -->
+  <section class="diapo">
+    <h2>7. Combien ça paie ?</h2>
+    <p class="retenir" id="r-salaire"></p>
+    <div class="zone"><canvas id="g-salaire"></canvas></div>
+    <p class="source" id="s-salaire"></p>
+  </section>
+
+  <!-- 8. Méthode -->
+  <section class="diapo">
+    <h2>8. D'où viennent ces chiffres ?</h2>
+    <div class="deux texte">
+      <div>
+        <h3>Les sources</h3>
+        <ul id="m-sources"></ul>
+        <h3>Ce qu'on a vérifié</h3>
+        <ul id="m-verifs"></ul>
+      </div>
+      <div>
+        <h3>Les limites</h3>
+        <ul>
+          <li><b>Une offre n'est pas un poste</b> : beaucoup d'alternances se trouvent sans annonce (candidature spontanée, réseau).</li>
+          <li><b>Les écoles publient des offres</b> pour recruter leurs élèves : on les a retirées (sauf si la case est cochée).</li>
+          <li><b>Le métier est celui choisi par l'employeur</b> (ou déduit du titre pour Adzuna).</li>
+          <li><b>Le salaire est rarement affiché</b> ; pour un apprenti, il dépend surtout de l'âge et de l'année de contrat.</li>
+          <li><b>Une photographie</b> des offres actives à une date, pas un suivi dans le temps.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="data/alternance.js"></script>
+<script src="assets/presentation.js?v=1"></script>
+</body>
+</html>

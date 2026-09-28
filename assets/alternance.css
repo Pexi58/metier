@@ -1,0 +1,41 @@
+/* alternance.css — ce que la page Alternance ajoute à commun.css */
+.panneau { display:grid; gap:14px; }
+.ligne-metier { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.ligne-metier select, .ligne-metier input { font:inherit; padding:7px 10px; border:1px solid var(--trait); border-radius:8px; background:var(--carte); }
+.ligne-metier select { flex:1 1 320px; font-weight:600; }
+.ligne-metier input { flex:1 1 260px; }
+.filtres-alt { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(210px,100%), 1fr)); gap:24px; align-items:start; }
+.filtres-alt h3 { margin:0 0 8px; font-size:.85rem; text-transform:uppercase; letter-spacing:.04em; color:var(--gris); }
+.filtres-alt select { font:inherit; font-size:.9rem; margin-top:8px; width:100%; padding:4px 8px; border:1px solid var(--trait); border-radius:8px; background:var(--carte); }
+.puces { display:flex; gap:6px; flex-wrap:wrap; }
+.puces button { font:inherit; font-size:.85rem; padding:4px 12px; border:1px solid var(--trait); border-radius:99px; background:var(--carte); cursor:pointer; }
+.puces button.actif { background:var(--accent); border-color:var(--accent); color:#fff; }
+.puces.grosses button { font-size:1rem; font-weight:600; padding:6px 16px; }
+.filtres-alt > div[hidden] { display:none; }
+.boutons button:disabled { opacity:.5; cursor:default; }
+.lecture { margin:10px 0 0; font-size:.92rem; line-height:1.45; }
+.lecture b:first-child { color:var(--accent); }
+.carte-outils label { font-size:.9rem; display:flex; align-items:center; gap:6px; }
+.carte-outils input, .carte-outils select { font:inherit; font-size:.9rem; padding:3px 6px; border:1px solid var(--trait); border-radius:6px; }
+.badge { display:inline-block; font-size:.72rem; line-height:1.55; padding:0 8px; border-radius:99px; border:1px solid var(--trait); color:var(--gris); white-space:nowrap; }
+.badge.ecole { background:#fff1e6; border-color:#ffc79c; color:#a34700; }
+.badge.interim { background:#f0f0f3; color:#555; }
+.badge.src { background:#eef3ff; border-color:#c6d7ff; color:#0a4ad0; }
+.badge.ok { background:#e8f5ec; border-color:#b5dfc1; color:#137333; }
+.item button.lien-ent { font:inherit; font-size:.85rem; border:0; background:none; color:var(--accent); cursor:pointer; padding:0; }
+.item button.lien-ent:hover { text-decoration:underline; }
+table.q { width:100%; border-collapse:collapse; font-size:.9rem; }
+table.q td, table.q th { text-align:left; padding:5px 8px; border-bottom:1px solid var(--trait); vertical-align:top; }
+table.q th { color:var(--gris); font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.03em; }
+table.q td.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.oui { color:#137333; font-weight:700; } .non { color:#c5221f; font-weight:700; }
+.limites { margin:0; padding-left:20px; } .limites li { margin:4px 0; }
+dialog { border:1px solid var(--trait); border-radius:14px; padding:20px; max-width:560px; width:calc(100% - 32px); }
+dialog::backdrop { background:rgba(0,0,0,.35); }
+dialog form { margin-top:14px; text-align:right; }
+dialog button { font:inherit; padding:5px 14px; border:1px solid var(--trait); border-radius:8px; background:var(--carte); cursor:pointer; }
+dl.fiche { display:grid; grid-template-columns:max-content 1fr; gap:4px 14px; margin:10px 0 0; font-size:.93rem; }
+dl.fiche dt { color:var(--gris); }
+dl.fiche dd { margin:0; }
+@media (max-width:980px) { .filtres-alt { grid-template-columns:1fr 1fr; } }
+@media (max-width:560px) { .filtres-alt { grid-template-columns:1fr; } }

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alternance — le marché de mon métier</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.min.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="assets/commun.css?v=3">
+<link rel="stylesheet" href="assets/alternance.css?v=1">
+</head>
+<body>
+<main>
+  <nav class="nav">
+    <a href="index.html">Accueil</a><a href="salaires.html">Ce que ça paie</a><a href="exigences.html">Ce qu'on vous demande</a>
+    <a href="recruteurs.html">Qui recrute</a><a href="mouvement.html">Le marché bouge</a><a href="alternance.html" class="ici" aria-current="page">Alternance</a><a href="presentation.html">Présentation</a>
+  </nav>
+  <h1 id="titre-page">L'alternance et les stages, métier par métier</h1>
+  <p class="sous" id="sous">Chargement des données…</p>
+
+  <!-- ============ 1. LE MÉTIER VISÉ ET LES FILTRES ============ -->
+  <div class="carte panneau">
+    <div class="ligne-metier">
+      <div class="puces grosses" id="f-contrat" role="group" aria-label="Type d'offre">
+        <button data-c="alternance">Alternance</button><button data-c="stage">Stage</button><button data-c="tous">Les deux</button>
+      </div>
+      <label for="f-metier"><b>Métier visé</b></label>
+      <select id="f-metier"></select>
+      <input id="f-mot" type="search" placeholder="Mot dans l'intitulé (ex. assistant, chef de projet, SEO)…">
+    </div>
+    <div class="filtres-alt">
+      <div>
+        <h3>Zone</h3>
+        <div class="puces" id="f-zones"></div>
+        <select id="f-zone-plus" aria-label="Autre région ou département"></select>
+      </div>
+      <div id="bloc-types">
+        <h3>Contrat d'alternance</h3>
+        <div class="cases" id="f-types"></div>
+      </div>
+      <div id="bloc-durees">
+        <h3>Durée du stage</h3>
+        <div class="cases" id="f-durees"></div>
+      </div>
+      <div>
+        <h3>Sources</h3>
+        <div class="cases" id="f-sources"></div>
+      </div>
+      <div>
+        <h3>Fiabilité</h3>
+        <div class="cases">
+          <label title="Les écoles publient des offres pour recruter leurs futurs élèves : masquées par défaut."><input type="checkbox" id="f-ecoles"> Afficher aussi les offres publiées par des écoles <small id="nb-ecoles"></small></label>
+          <label><input type="checkbox" id="f-interim"> Masquer intérim et cabinets <small id="nb-interim"></small></label>
+          <label><input type="checkbox" id="f-recentes"> Seulement les offres de moins de 90 jours <small id="nb-anciennes"></small></label>
+        </div>
+      </div>
+    </div>
+    <p class="compte" id="compte"></p>
+    <div class="boutons">
+      <button id="b-reset">Réinitialiser</button>
+      <button id="b-csv">Exporter la sélection (CSV pour Excel)</button>
+      <button id="b-lien">Copier le lien de cette vue</button>
+    </div>
+  </div>
+  <div class="vide" id="aucune" hidden>Aucune offre ne correspond. Élargissez la zone, changez de métier ou décochez un filtre de fiabilité.</div>
+
+  <!-- ============ 2. QUEL MÉTIER VISER ? ============ -->
+  <h2>Quel métier viser ? <small>— toutes les offres de la zone et des filtres, métier par métier ; cliquez une barre pour la choisir</small></h2>
+  <div class="carte"><div class="zone" id="z-metiers"><canvas id="g-metiers"></canvas></div><p class="lecture" id="l-metiers"></p></div>
+
+  <!-- ============ 3. EN CHIFFRES ============ -->
+  <h2>En chiffres <small id="titre-sel"></small></h2>
+  <div class="chiffres" id="chiffres"></div>
+
+  <!-- ============ 4. OÙ ============ -->
+  <h2>Où sont les offres</h2>
+  <div class="carte large">
+    <div class="carte-outils">
+      <button data-vue="france">France</button><button data-vue="clermont">Clermont</button>
+      <button data-vue="aura">Auvergne-Rhône-Alpes</button><button data-vue="paris">Île-de-France</button>
+      <span class="legende"><span><i style="background:#0a5cff"></i>entreprise</span><span><i style="background:#ff6a00"></i>école</span><span><i style="background:#8e8e93"></i>intérim, cabinet ou non précisé</span></span>
+    </div>
+    <div id="map"></div>
+    <p class="note" id="note-carte"></p>
+  </div>
+  <div class="grille" style="margin-top:16px">
+    <div class="carte"><h3 id="t-lieux">Par région</h3><div class="zone"><canvas id="g-lieux"></canvas></div><p class="lecture" id="l-lieux"></p></div>
+    <div class="carte"><h3>Évolution jour après jour <small>— France Travail, extractions du dépôt</small></h3><div class="zone"><canvas id="g-serie"></canvas></div><p class="lecture" id="l-serie"></p></div>
+  </div>
+
+  <!-- ============ 4 bis. ZOOM SUR LA RÉGION SUIVIE ============ -->
+  <h2 id="region">Zoom sur <span class="nom-region">la région</span> <small>— département par département, pour le métier choisi (la zone ci-dessus ne s'applique pas ici)</small></h2>
+  <div class="carte">
+    <p class="note" id="region-couverture" style="margin-top:0"></p>
+    <div style="overflow-x:auto"><table class="q" id="region-table"></table></div>
+    <p class="lecture" id="l-region"></p>
+  </div>
+  <div class="grille" style="margin-top:16px">
+    <div class="carte"><h3>Offres par département</h3><div class="zone"><canvas id="g-region"></canvas></div></div>
+    <div class="carte"><h3>Les villes qui recrutent le plus</h3><div class="zone"><canvas id="g-region-villes"></canvas></div><p class="lecture" id="l-region-villes"></p></div>
+  </div>
+
+  <!-- ============ 5. LE CONTRAT ============ -->
+  <h2>Le contrat</h2>
+  <div class="grille">
+    <div class="carte"><h3 id="t-type">Apprentissage ou professionnalisation</h3><div class="zone"><canvas id="g-type"></canvas></div><p class="lecture" id="l-type"></p></div>
+    <div class="carte"><h3>Diplôme préparé ou demandé</h3><div class="zone"><canvas id="g-diplome"></canvas></div><p class="lecture" id="l-diplome"></p></div>
+    <div class="carte"><h3>Rémunération affichée <small>— brut mensuel, minimum de la fourchette</small></h3><div class="zone"><canvas id="g-salaire"></canvas></div><p class="lecture" id="l-salaire"></p></div>
+    <div class="carte"><h3>Fraîcheur des annonces</h3><div class="zone"><canvas id="g-age"></canvas></div><p class="lecture" id="l-age"></p></div>
+  </div>
+
+  <!-- ============ 6. QUI RECRUTE ============ -->
+  <h2>Qui recrute <small>— croisé avec l'API Recherche d'entreprises (taille, activité)</small></h2>
+  <div class="grille">
+    <div class="carte"><h3>Qui publie l'offre</h3><div class="zone"><canvas id="g-publie"></canvas></div><p class="lecture" id="l-publie"></p></div>
+    <div class="carte"><h3>Taille de l'employeur</h3><div class="zone"><canvas id="g-taille"></canvas></div><p class="lecture" id="l-taille"></p></div>
+    <div class="carte"><h3>Secteur d'activité</h3><div class="zone"><canvas id="g-secteurs"></canvas></div><p class="lecture" id="l-secteurs"></p></div>
+    <div class="carte"><h3>Les employeurs qui publient le plus</h3><div class="zone"><canvas id="g-employeurs"></canvas></div><p class="lecture" id="l-employeurs"></p></div>
+  </div>
+
+  <!-- ============ 7. CE QU'ON DEMANDE ============ -->
+  <h2>Ce qu'on vous demande</h2>
+  <div class="carte"><h3>Outils et compétences cités dans les annonces <small>— part des offres</small></h3><div class="zone"><canvas id="g-outils"></canvas></div><p class="lecture" id="l-outils"></p></div>
+
+  <!-- ============ 8. LES OFFRES ============ -->
+  <h2>Les offres <small id="nb-liste"></small></h2>
+  <div class="carte">
+    <div class="carte-outils">
+      <label>Trier par <select id="f-tri"><option value="date">les plus récentes</option><option value="salaire">le salaire affiché</option><option value="lieu">le département</option></select></label>
+    </div>
+    <div class="liste" id="liste"></div>
+    <div class="boutons"><button id="b-plus" hidden>Afficher 30 de plus</button></div>
+  </div>
+
+  <!-- ============ 9. ENTREPRISES À DÉMARCHER (API EN DIRECT) ============ -->
+  <h2>Entreprises à démarcher</h2>
+  <div class="carte" style="margin-bottom:16px">
+    <h3>1. Celles que La bonne alternance juge « susceptibles de recruter en alternance » <small id="r-titre"></small></h3>
+    <p class="note" style="margin-top:0">Sélection faite par l'algorithme de La bonne alternance (d'après les embauches passées), pour <span class="nom-region">la région</span> seulement. Ce n'est pas une liste complète : l'API en renvoie 150 au plus par recherche. Elle suit le métier choisi et, si vous avez choisi un département de la région, ce département.</p>
+    <div class="liste" id="r-liste"></div>
+    <div class="boutons"><button id="r-plus" hidden>Afficher 30 de plus</button><button id="r-csv" hidden>Exporter (CSV)</button></div>
+  </div>
+  <div class="carte">
+    <h3>2. Toutes les entreprises d'un département, dans les activités proches du métier <small>— en direct depuis l'API Recherche d'entreprises (État)</small></h3>
+    <p class="note" style="margin-top:0">Pour une candidature spontanée en alternance : les entreprises actives du département, dans les activités proches du métier choisi. Aucune clé n'est nécessaire, les résultats viennent du répertoire SIRENE à l'instant où vous cliquez.</p>
+    <div class="carte-outils">
+      <label>Département <input id="e-dep" size="4" value="63"></label>
+      <label>Taille <select id="e-taille">
+        <option value="03,11,12,21,22,31,32,41,42,51,52,53">6 salariés et plus</option>
+        <option value="11,12,21,22,31,32,41,42,51,52,53" selected>10 salariés et plus</option>
+        <option value="21,22,31,32,41,42,51,52,53">50 salariés et plus</option>
+        <option value="32,41,42,51,52,53">250 salariés et plus</option></select></label>
+      <label><input type="checkbox" id="e-toutes"> Toutes activités (pas seulement celles du métier)</label>
+      <button id="e-go">Chercher</button>
+    </div>
+    <p class="note" id="e-naf"></p>
+    <div class="liste" id="e-liste"></div>
+    <div class="boutons"><button id="e-plus" hidden>Page suivante</button><button id="e-csv" hidden>Exporter (CSV)</button></div>
+  </div>
+
+  <!-- ============ 10. FIABILITÉ ============ -->
+  <h2 id="fiabilite">Fiabilité des données <small>— ce qui a été vérifié, ce qui a été corrigé</small></h2>
+  <div class="grille">
+    <div class="carte"><h3>Sources</h3><div id="q-sources"></div></div>
+    <div class="carte"><h3>Contrôles automatiques</h3><div id="q-controles"></div></div>
+    <div class="carte large"><h3>Nettoyage</h3><div id="q-nettoyage"></div></div>
+    <div class="carte large"><h3>Ce que ces chiffres n'autorisent pas à conclure</h3>
+      <ul class="limites">
+        <li><b>Une offre n'est pas un poste.</b> Une annonce peut couvrir plusieurs postes, et beaucoup d'alternances se pourvoient sans annonce (candidature spontanée, réseau, école).</li>
+        <li><b>Les écoles publient pour leurs futurs élèves.</b> Une offre d'école est réelle, mais elle suppose de s'inscrire dans cette école : c'est pourquoi on peut les masquer.</li>
+        <li><b>Le code ROME est celui choisi par l'employeur</b> (ou déduit de la recherche pour Adzuna) : un « assistant ADV » peut se retrouver en assistant marketing.</li>
+        <li><b>Le salaire est rarement affiché</b> et, pour un apprenti, il dépend surtout de l'âge et de l'année de contrat (barème légal), pas de l'employeur.</li>
+        <li><b>Le croisement avec les entreprises se fait par le nom</b> (France Travail ne donne pas le SIRET) : une correspondance sur trois environ est approchée ; le score est affiché dans la fiche de l'employeur.</li>
+        <li><b>Une photographie, pas un flux.</b> Les chiffres portent sur les offres actives le jour de l'extraction ; la série n'a que quelques jours.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    Chaîne : <code>data/brut</code> + <code>data/actives</code> (France Travail, dépôt du cours) + La bonne alternance + Adzuna (si clés dans <code>.env</code>)
+    → <code>scripts/alternance.mjs</code> (nettoyage, dédoublonnage, croisement API Recherche d'entreprises, contrôles)
+    → <code>data/alternance.json</code> → cette page, qui recalcule tout dans le navigateur. Les métiers suivis sont dans <code>config/alternance.json</code>.
+    Pas de scraping de LinkedIn, Indeed ou APEC (interdit par leurs CGU).
+  </footer>
+</main>
+
+<dialog id="fiche"><div id="fiche-corps"></div><form method="dialog"><button>Fermer</button></form></dialog>
+
+<script src="data/alternance.js"></script>
+<script src="data/alternance-recruteurs.js"></script>
+<script src="assets/alternance.js?v=1"></script>
+</body>
+</html>
