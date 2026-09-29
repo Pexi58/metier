@@ -58,15 +58,17 @@ Hauts-de-Seine en tête ; 27 % des offres affichent un salaire, médiane
 
 ## Les métiers suivis
 
-24 codes ROME, choisis pour le M2 MOD parmi les 1 911 du référentiel France
+20 codes ROME, choisis pour le M2 MOD parmi les 1 911 du référentiel France
 Travail (la liste vit dans `scripts/extraire.py`, `METIERS`, et dans
 `config/alternance.json` pour la veille alternance) : le cœur
 marketing (M1718 chargé de marketing digital, M1716, M1705, M1703, M1620,
-M1706, M1430, M1711), le digital (E1113 e-commerce, D1438, E1101 community
-manager, E1124, E1405 SEO, M1886, M1426, M1719 et E1406 influence, E1127
-brand manager / brand content) et, décochés par défaut, le groupe
-« Communication et commerce », métiers voisins du marketing (E1112, E1103,
-E1107, E1404, D1415 CRM, D1510 chef de secteur GMS). D1506 (merchandising) a été retiré le 29/09/2026.
+M1430, M1711), le digital (E1113 e-commerce, D1438, E1101 community
+manager, E1124, E1405 SEO, M1886, M1426, E1127 brand manager / brand content)
+et, décochés par défaut, le groupe « Communication et commerce », métiers
+voisins du marketing (E1112, E1103, E1107, E1404, D1510 chef de secteur GMS).
+Retirés le 29/09/2026 : D1506 (merchandising), D1415 (relation client),
+M1706 (promotion des ventes), M1719 et E1406 (influence) ; leurs offres déjà
+collectées restent dans `data/brut/`.
 E1127 et D1510 ont été ajoutés le 29/09/2026 : les offres « brand manager »
 sont classées par France Travail surtout en E1127, les « chefs de secteur GMS »
 surtout en D1510 (vérifié par une recherche par mots-clés dans l'API).

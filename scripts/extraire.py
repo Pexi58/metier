@@ -42,7 +42,6 @@ METIERS = {
     "M1705": ("Responsable marketing", "Marketing", True),
     "M1703": ("Chef(fe) de produit", "Marketing", True),
     "M1620": ("Assistant(e) marketing", "Marketing", True),
-    "M1706": ("Chef(fe) de promotion des ventes", "Marketing", True),
     "M1430": ("Chargé(e) d'études commerciales", "Marketing", True),
     "M1711": ("Directeur(trice) du marketing", "Marketing", True),
     # Digital, contenu, e-commerce
@@ -53,15 +52,12 @@ METIERS = {
     "E1405": ("Référenceur(se) web (SEO)", "Digital", True),
     "M1886": ("Chef(fe) de projet web", "Digital", True),
     "M1426": ("Chief digital officer", "Digital", True),
-    "M1719": ("Chargé(e) des relations avec les influenceurs", "Digital", True),
-    "E1406": ("Influenceur(se) web", "Digital", True),
     "E1127": ("Brand manager / brand content", "Digital", True),
     # Communication et commerce : métiers voisins, décochés par défaut
     "E1112": ("Chargé(e) de communication", "Communication et commerce", False),
     "E1103": ("Chargé(e) des relations publiques", "Communication et commerce", False),
     "E1107": ("Chef(fe) de projet événementiel", "Communication et commerce", False),
     "E1404": ("Assistant(e) en publicité", "Communication et commerce", False),
-    "D1415": ("Chargé(e) de relation client (CRM)", "Communication et commerce", False),
     "D1510": ("Responsable / chef de secteur GMS", "Communication et commerce", False),
 }
 

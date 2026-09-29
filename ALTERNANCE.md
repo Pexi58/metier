@@ -1,7 +1,7 @@
 # Veille alternance — ce qui a été ajouté au dépôt
 
 Deux pages et un script qui se concentrent sur les **offres en alternance** (apprentissage et
-professionnalisation), pour **n'importe lequel des 24 métiers suivis** : le métier n'est pas figé,
+professionnalisation), pour **n'importe lequel des 20 métiers suivis** : le métier n'est pas figé,
 il se choisit dans la page. Toute la France est couverte, et **Auvergne-Rhône-Alpes** l'est en détail.
 
 ## Le site : trois pages, un même menu
@@ -41,7 +41,7 @@ une case permet de les afficher.
 
 | Source | Clé (dans `.env`) | Ce qu'elle apporte |
 |---|---|---|
-| France Travail — base du cours (`data/brut`) | aucune | toutes les offres des 24 métiers, France entière (elle relaie déjà PMEJob, DirectEmploi, Meteojob…) |
+| France Travail — base du cours (`data/brut`) | aucune | toutes les offres des 20 métiers, France entière (elle relaie déjà PMEJob, DirectEmploi, Meteojob…) |
 | La bonne alternance (API officielle de l'alternance) | `LBA_API_KEY` | recherche nationale + recherche autour de 13 villes d'Auvergne-Rhône-Alpes ; donne aussi les entreprises « susceptibles de recruter en alternance » |
 | Adzuna (agrégateur de sites d'emploi) | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | recherche nationale + recherche dédiée à la région ; le métier est déduit du titre de l'offre |
 | API Recherche d'entreprises (État) | aucune | taille, secteur, école ou non de chaque employeur ; liste de toutes les entreprises d'un département |
