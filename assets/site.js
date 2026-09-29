@@ -99,6 +99,25 @@ const Site = (() => {
       + L.apprentissage.map(l => `<tr><td>${esc(l.age)}</td>${l.taux.map(t => `<td>${eur(L.smic_mensuel * t / 100)} <small>(${t} %)</small></td>`).join("")}</tr>`).join("")
       + `</table><p class="note">Un étudiant de master a le plus souvent 21 à 25 ans : de ${eur(L.smic_mensuel * 0.53)} à ${eur(L.smic_mensuel * 0.78)}. Le contrat de professionnalisation suit une grille proche. <a href="${esc(L.source)}" target="_blank" rel="noopener">service-public.fr</a></p>`;
   }
+  /* ---- Offres douteuses et tri par fiabilité ----
+     o.alertes (écrit par scripts/alternance.mjs, contrôles de sens) : les raisons de lire l'offre avec prudence. */
+  const badgeAlerte = o => (o.alertes || []).length
+    ? `<span class="badge alerte" title="${esc("À vérifier : " + o.alertes.join(" ; "))}">⚠ à vérifier : ${esc(o.alertes[0])}${o.alertes.length > 1 ? ` (+${o.alertes.length - 1})` : ""}</span>` : "";
+  // Une offre « complète et fiable » : employeur nommé, salaire exploitable, texte complet, lieu exact, récente, sans alerte.
+  function fiabilite(o) {
+    const j = Date.parse(D.date) - Date.parse(o.date), age = isFinite(j) ? j / 86400000 : 99;
+    return (o.ent ? 3 : 0) + (salUtile(o) ? 2 : 0) + (o.src !== "ADZ" ? 1 : 0) + (o.prec === "offre" ? 1 : 0) + (o.diplome ? 0.5 : 0)
+      + (age < 7 ? 2 : age < 30 ? 1 : 0) - 4 * (o.alertes || []).length;
+  }
+  // Le salaire tel qu'il faut le montrer : exploitable, barème recopié, ou invraisemblable (montant annoncé, barré du calcul).
+  function salaireAffiche(o) {
+    const eur = v => Math.round(v).toLocaleString("fr-FR");
+    if (o.sal_bareme) return `<span title="L'annonce recopie le barème légal de l'apprentissage (27 % à 100 % du SMIC) : le montant réel dépend de l'âge et de l'année de contrat">Salaire : barème légal</span>`;
+    if (o.sal_etat === "invraisemblable" && o.sal_annonce) return `<span class="sal-douteux" title="Montant invraisemblable pour ce type de contrat : il n'est compté dans aucune statistique">${eur(o.sal_annonce[0])}${o.sal_annonce[1] > o.sal_annonce[0] ? "–" + eur(o.sal_annonce[1]) : ""} € annoncés ⚠</span>`;
+    if (o.sal_etat === "rejeté" && o.sal_lib) return `<span class="sal-douteux" title="Montant illisible ou hors de 300–6 000 € par mois : il n'est compté dans aucune statistique">« ${esc(o.sal_lib)} » ⚠</span>`;
+    return o.smin ? `<span class="sal">${eur(o.smin)}${o.smax > o.smin ? "–" + eur(o.smax) : ""} € brut/mois</span>` : "";
+  }
+
   // Rend un élément cliquable utilisable au clavier (Entrée, Espace) et annoncé comme bouton.
   function commeBouton(el, action, libelle) {
     el.setAttribute("role", "button"); el.tabIndex = 0;
@@ -108,7 +127,9 @@ const Site = (() => {
   }
 
   return {
-    esc, nb, pct, dateFr, lireChoix, memoriser, salUtile, quartiles, minimaLegaux, commeBouton,
+    esc, nb, pct, dateFr, lireChoix, memoriser, salUtile, quartiles, minimaLegaux, commeBouton, badgeAlerte, fiabilite, salaireAffiche,
+    // Toutes les offres publiées, y compris celles retirées des chiffres (annonces sans poste) : pour retrouver une offre par son identifiant.
+    toutesOffres: () => [...(D.offres || []), ...(D.offres_signalees || [])],
     libDep: code => (D.departements || {})[code] ? `${D.departements[code]} (${code})` : "département " + code,
     villeSimple: v => String(v || "").replace(/\s+\d+(er|e|ème)?\s+(arrondissement|canton)$/i, "").trim(),
     SOURCES: { FT: "France Travail", LBA: "La bonne alternance", ADZ: "Adzuna" },

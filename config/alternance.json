@@ -52,7 +52,14 @@
     "Communication et commerce": ["70.21Z", "73.11Z", "82.30Z", "59.11B", "90.01Z", "47.19B"]
   },
   "_aide_hors_sujet": "Intitulés écartés quelle que soit la source, parce que le métier réel n'est pas du marketing (classement de l'employeur ou mot-clé trop large). Expressions régulières appliquées au titre écrit sans accents, sans majuscules ni ponctuation. Une offre dont le titre cite aussi marketing, communication, publicité, digital ou web est gardée.",
-  "titres_hors_sujet": ["\\bmediateur", "\\bvendeu(r|se)\\b", "conseill(er|ere) de vente", "conseiller commercial", "receptionnaire", "aide a domicile", "auxiliaire de vie", "services a la personne", "assistant( e)?( responsable)? d agence", "agence d interim", "gestionnaire adv", "developpeu(r|se) (front|back|full|logiciel|informatique|java|php|python)", "integrat(eur|rice)", "responsable de magasin", "recouvrement", "customer success"],
+  "titres_hors_sujet": ["\\bmediateur", "\\bvendeu(r|se)\\b", "conseill(er|ere) de vente", "conseiller commercial", "receptionnaire", "aide a domicile", "auxiliaire de vie", "services a la personne", "assistant( e)?( responsable)? d agence", "agence d interim", "gestionnaire adv", "developpeu(r|se) (front|back|full|logiciel|informatique|java|php|python)", "integrat(eur|rice)", "responsable de magasin", "recouvrement", "customer success", "cybersecurite", "pentest", "red teaming"],
+  "_aide_sans_poste": ["Annonces qui ne proposent pas de poste : retirées de toutes les statistiques, listées à part dans les pages.", "« titre » : expressions cherchées dans l'intitulé ; « texte » : expressions sans ambiguïté cherchées aussi dans le texte de l'annonce", "(pas « ne pas postuler », qu'on trouve dans « merci de ne pas postuler si vous n'avez pas le niveau »). Sans accents ni majuscules."],
+  "annonces_sans_poste": {
+    "titre": ["on ne recrute pas", "nous ne recrutons pas", "ne recrute pas", "pas de recrutement", "ne pas postuler", "ne postulez pas", "ne pas repondre", "annonce test", "offre test", "test annonce", "offre fictive", "annonce fictive", "candidature spontanee", "candidatures spontanees", "vivier", "cvtheque", "offre pourvue", "poste pourvu", "deja pourvu"],
+    "texte": ["on ne recrute pas", "nous ne recrutons pas actuellement", "cette annonce est un test", "annonce test", "offre fictive", "annonce fictive", "offre deja pourvue", "poste deja pourvu", "ce poste a ete pourvu"]
+  },
+  "_aide_salaire_vraisemblable": "Au-delà de ces multiples du SMIC mensuel, un salaire affiché est jugé invraisemblable : l'offre reste, son salaire sort des statistiques et elle est signalée.",
+  "salaire_vraisemblable": { "alternance_max_smic": 1.4, "stage_max_smic": 1.2, "fourchette_max_smic": 2.2 },
   "_aide_remuneration": "Minima légaux, pour lire les salaires affichés. À mettre à jour quand le SMIC change (service-public.fr).",
   "remuneration_legale": {
     "smic_mensuel": 1867.02,

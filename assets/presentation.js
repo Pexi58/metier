@@ -314,7 +314,7 @@ function rendre() {
   ].map(t => `<li>${t}</li>`).join(""));
   // À lire avec prudence : les contrôles de sens, calculés chaque matin ; un clic montre les offres concernées.
   const vig = (q.vigilance || []).filter(v => v.n);
-  const parId = new Map(D.offres.map(o => [o.id, o]));
+  const parId = new Map(Site.toutesOffres().map(o => [o.id, o]));
   ecrire("m-vigilance", vig.length ? vig.map((v, i) => `<li data-v="${i}"><b>${nb(v.n)}</b> ${esc(v.nom.charAt(0).toLowerCase() + v.nom.slice(1))} <span class="note">— ${esc(v.detail)}</span></li>`).join("") : "<li>Aucune anomalie repérée ce matin.</li>");
   document.querySelectorAll("#m-vigilance li[data-v]").forEach(li => Site.commeBouton(li, () => {
     const v = vig[+li.dataset.v], off = v.ids.map(id => parId.get(id)).filter(Boolean);

@@ -60,6 +60,17 @@ const RX_HORS_SUJET = (CONFIG.titres_hors_sujet || []).length ? new RegExp(CONFI
 const RX_SAUVE = /\b(marketing|communication|publicite|digital|digitale|web|e commerce|ecommerce|community|marque|brand|social media|seo|gms)\b/;
 // Minima légaux (config : remuneration_legale) : le SMIC sert à reconnaître le barème recopié tel quel.
 const LEGAL = CONFIG.remuneration_legale || { smic_mensuel: 1867.02 };
+// Annonces qui ne proposent pas de poste (« on ne recrute pas », annonce test, vivier de CV…) : config annonces_sans_poste.
+const listeRx = l => (l || []).length ? new RegExp("\\b(" + l.join("|") + ")\\b") : null;
+const RX_SANS_POSTE_TITRE = listeRx((CONFIG.annonces_sans_poste || {}).titre), RX_SANS_POSTE_TEXTE = listeRx((CONFIG.annonces_sans_poste || {}).texte);
+// Liste large pour le titre, liste stricte pour le texte (« merci de ne pas postuler si… » n'est pas une annonce vide).
+const sansPoste = (titre, texte) => {
+  const m = (RX_SANS_POSTE_TITRE && RX_SANS_POSTE_TITRE.exec(norm(titre))) || (RX_SANS_POSTE_TEXTE && RX_SANS_POSTE_TEXTE.exec(norm(texte)));
+  if (m && process.env.DEBUG_SANS_POSTE) console.log(`  sans poste : « ${m[0]} » — ${titre}`);
+  return !!m;
+};
+// Seuils de vraisemblance du salaire affiché, en multiples du SMIC (config salaire_vraisemblable).
+const VRAISEMBLABLE = Object.assign({ alternance_max_smic: 1.4, stage_max_smic: 1.2, fourchette_max_smic: 2.2 }, CONFIG.salaire_vraisemblable || {});
 const ORDRE_SOURCES = ["FT", "LBA", "ADZ"];
 
 const lireJson = (f, defaut) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return defaut; } };
@@ -275,7 +286,7 @@ function normaliserFT(o, rome, vuLe) {
     date: (o.dateCreation || "").slice(0, 10), maj: (o.dateActualisation || "").slice(0, 10), vu_le: vuLe || "",
     url: (o.origineOffre && o.origineOffre.urlOrigine) || `https://candidat.francetravail.fr/offres/recherche/detail/${o.id}`,
     outils: outilsCites(t), tele: /t[ée]l[ée]travail/.test(t), postes: Number(o.nombrePostes) || 1,
-    empreinte: sha(norm(o.description || "").slice(0, 400)),
+    empreinte: sha(norm(o.description || "").slice(0, 400)), sans_poste: sansPoste(o.intitule, texte),
   };
 }
 
@@ -390,7 +401,7 @@ function offreLBA(j, rome, aujourdhui) {
     date: String((of.publication && of.publication.creation) || "").slice(0, 10), maj: "", vu_le: aujourdhui,
     url: (j.apply && j.apply.url) || "", outils: outilsCites(texte.toLowerCase()),
     tele: c.remote === "remote" || c.remote === "hybrid", postes: Number(of.opening_count) || 1,
-    empreinte: sha(norm(of.description || "").slice(0, 400)),
+    empreinte: sha(norm(of.description || "").slice(0, 400)), sans_poste: sansPoste(of.title, texte),
   };
 }
 
@@ -514,7 +525,7 @@ function offreAgregateur({ id, src, via, rome, contrat, titre, desc, ent, lieu, 
     debutant: true, sal_lib: sal ? sal.lib : "", smin: sal ? sal.smin : null, smax: sal ? sal.smax : null, sal_etat: sal ? sal.etat : "absent",
     date, maj: "", vu_le: new Date().toISOString().slice(0, 10),
     url, outils: outilsCites(texte.toLowerCase()), tele: /t[ée]l[ée]travail/i.test(desc), postes: 1,
-    empreinte: sha(norm(desc).slice(0, 400)),
+    empreinte: sha(norm(desc).slice(0, 400)), sans_poste: sansPoste(titre, texte),
   };
 }
 const garderSelonContrat = (contrat, texte) => contrat === "stage" ? estStageTexte(texte) && !estAlternanceTexte(texte) : estAlternanceTexte(texte);
@@ -804,25 +815,34 @@ function controler(offres, ctx) {
 /* Contrôles de sens : les contrôles ci-dessus vérifient la forme (identifiants, dates, liens) ; ceux-ci
    comptent les offres dont le CONTENU est douteux. Ils ne bloquent rien : ils disent combien d'offres
    sont à lire avec prudence, et lesquelles (identifiants, pour les retrouver dans la page). */
-function controlerSens(offres) {
+function controlerSens(offres, signalees = []) {
   const v = [];
-  const ajoute = (nom, liste, detail) => v.push({ nom, n: liste.length, detail, ids: liste.slice(0, 200).map(o => o.id) });
+  // Chaque ligne marque aussi les offres concernées (o.alertes) : les pages affichent un badge « À vérifier ».
+  const ajoute = (nom, liste, detail, alerte) => {
+    v.push({ nom, n: liste.length, detail, ids: liste.slice(0, 200).map(o => o.id) });
+    if (alerte) for (const o of liste) (o.alertes = o.alertes || []).push(alerte);
+  };
+  ajoute("Annonces sans poste réel (retirées de tous les chiffres)", signalees,
+    "« on ne recrute pas » (dans le titre, le texte ou à la place du nom de l'employeur), annonce test, vivier de CV, candidature spontanée… : listes dans config/alternance.json (annonces_sans_poste)");
+  ajoute("Salaire invraisemblable (écarté des statistiques)", offres.filter(o => o.sal_etat === "invraisemblable" || o.sal_etat === "rejeté"),
+    `au-dessus de ${VRAISEMBLABLE.alternance_max_smic} × SMIC pour une alternance, ${VRAISEMBLABLE.stage_max_smic} × SMIC pour un stage, fourchette au-delà de ${VRAISEMBLABLE.fourchette_max_smic} × SMIC, ou montant hors de 300–6 000 € par mois : l'offre reste, son salaire ne compte pas`,
+    "salaire annoncé invraisemblable");
   const alt = offres.filter(o => o.contrat === "alternance"), stages = offres.filter(o => o.contrat === "stage");
   ajoute("Alternances dont l'intitulé parle de stage", alt.filter(o => o.ambigu),
-    "classées en alternance par la source, mais le titre dit « stage » : le contrat réel est peut-être un stage");
+    "classées en alternance par la source, mais le titre dit « stage » : le contrat réel est peut-être un stage", "le titre parle de stage");
   // Ville citée dans le titre (« … - Massy (H/F) ») différente du lieu de l'offre.
   const villes = new Set(offres.map(o => norm(o.ville)).filter(v => v.length > 2));
   const villeTitre = o => { const m = /\s[-–]\s*([^-–(]+?)\s*(\([^)]*\))?\s*$/.exec(o.titre || ""); return m ? norm(m[1]) : ""; };
   ajoute("Ville du titre différente du lieu de l'offre", offres.filter(o => { const t = villeTitre(o); return t && villes.has(t) && o.ville && !norm(o.ville).includes(t); }),
-    "souvent une annonce relayée par un site d'emploi, placée ailleurs que le poste : la carte peut se tromper");
+    "souvent une annonce relayée par un site d'emploi, placée ailleurs que le poste : la carte peut se tromper", "ville du titre ≠ lieu");
   const smic = LEGAL.smic_mensuel, grat = (LEGAL.gratification_horaire || 4.35) * (LEGAL.heures_mois || 151.67);
   ajoute("Barème légal recopié au lieu d'un salaire", offres.filter(o => o.sal_bareme),
-    "fourchette « 27 % à 100 % du SMIC » : ce n'est pas ce que l'employeur propose ; retirée des médianes de salaire");
+    "fourchette « 27 % à 100 % du SMIC » : ce n'est pas ce que l'employeur propose ; retirée des médianes de salaire", "salaire = barème légal recopié");
   ajoute("Rémunération sous le minimum légal", [...alt.filter(o => o.smin != null && o.smin < 0.25 * 0.94 * smic),
     ...stages.filter(o => o.smin != null && o.smin < 0.9 * grat)],
-    `alternance sous 27 % du SMIC, ou stage sous la gratification minimale (${Math.round(grat)} € par mois à temps plein) : erreur de saisie ou temps partiel`);
+    `alternance sous 27 % du SMIC, ou stage sous la gratification minimale (${Math.round(grat)} € par mois à temps plein) : erreur de saisie ou temps partiel`, "salaire sous le minimum légal");
   ajoute("Intitulés de niveau direction", offres.filter(o => /\b(directeur|directrice|director|chief|head of|cmo|cdo)\b/.test(norm(o.titre))),
-    "rares pour une alternance ou un stage : souvent un « assistant(e) de direction » ou un métier mal classé");
+    "rares pour une alternance ou un stage : souvent un « assistant(e) de direction » ou un métier mal classé", "intitulé de niveau direction");
   const sansDuree = stages.filter(o => o.duree == null);
   ajoute("Stages sans durée connue", sansDuree,
     `${stages.length ? Math.round(100 * sansDuree.length / stages.length) : 0} % des stages : les agrégateurs ne donnent qu'un extrait de l'annonce`);
@@ -893,6 +913,15 @@ async function main() {
   // Salaire : « 486 € à 1 801 € » n'est pas une offre, c'est le barème légal de l'apprentissage recopié en entier
   // (27 % du SMIC à 100 % du SMIC, avec le SMIC de l'année où l'annonce a été saisie : d'où une marge de 6 %).
   const smic = LEGAL.smic_mensuel;
+  // Salaire invraisemblable (alternance à 45 000 € par an, fourchette « 800 à 5 000 € ») : l'offre reste, mais son salaire
+  // sort des statistiques. Le montant annoncé est gardé (sal_annonce) pour être montré, avec le signalement.
+  for (const o of offres) {
+    if (o.smin == null) continue;
+    const max = (o.contrat === "stage" ? VRAISEMBLABLE.stage_max_smic : VRAISEMBLABLE.alternance_max_smic) * smic;
+    if (o.smin > max || o.smax > VRAISEMBLABLE.fourchette_max_smic * smic) {
+      o.sal_annonce = [o.smin, o.smax]; o.smin = o.smax = null; o.sal_etat = "invraisemblable";
+    }
+  }
   for (const o of offres) o.sal_bareme = o.smin != null && o.smin >= 0.25 * 0.94 * smic && o.smin <= 0.29 * smic && o.smax >= 0.94 * smic && o.smax <= 1.03 * smic;
   // Une alternance dont l'intitulé dit « stage » : on la garde, mais on la signale.
   for (const o of offres) if (o.contrat === "alternance" && /\b(stage|stagiaire)\b/.test(norm(o.titre)))
@@ -909,17 +938,25 @@ async function main() {
   const direct = lba.offres.length || adz.length || journal.some(s => /API en direct/.test(s.source) && s.n);
   const jourRef = direct || !ft.jour ? new Date().toISOString().slice(0, 10) : ft.jour;
   const age = d => (Date.parse(jourRef) - Date.parse(d)) / 86400000;
+  // Annonces sans poste réel : elles quittent la liste des offres (donc tous les chiffres) et sont publiées à part.
+  // Le « nom d'employeur » compte aussi : Adzuna publie des annonces dont l'employeur s'appelle « On ne recrute pas ».
+  for (const o of offres) if (!o.sans_poste && sansPoste(o.ent || o.ent_annonce || "", "")) o.sans_poste = true;
+  const signalees = offres.filter(o => o.sans_poste);
+  for (let i = offres.length - 1; i >= 0; i--) if (offres[i].sans_poste) offres.splice(i, 1);
+  for (const o of signalees) o.alertes = ["annonce qui ne propose pas de poste"];
   const controles = controler(offres, { jour: ft.jour, jourRef, nFTdepot });
-  const vigilance = controlerSens(offres);
+  const vigilance = controlerSens(offres, signalees);
 
   // On retire des sorties le champ de travail du dédoublonnage.
-  for (const o of offres) delete o.empreinte;
+  for (const o of [...offres, ...signalees]) { delete o.empreinte; delete o.sans_poste; }
   const qualite = {
     brutes: brutes.length, par_source: parSource, retenues: offres.length,
     par_contrat: { alternance: offres.filter(o => o.contrat === "alternance").length, stage: offres.filter(o => o.contrat === "stage").length },
     durees_stage: offres.filter(o => o.contrat === "stage").reduce((a, o) => (a[o.duree_classe] = (a[o.duree_classe] || 0) + 1, a), {}),
     doublons_meme_id: dd.meme_id, doublons_proches: dd.proches, doublons_relais: dd.relais,
     bareme_recopie: offres.filter(o => o.sal_bareme).length,
+    salaires_invraisemblables: offres.filter(o => o.sal_etat === "invraisemblable").length,
+    sans_poste: signalees.length,
     sans_entreprise: offres.filter(o => !o.ent).length,
     sans_lieu: offres.filter(o => !o.dep).length,
     positions: offres.reduce((a, o) => (a[o.prec || "aucune"] = (a[o.prec || "aucune"] || 0) + 1, a), {}),
@@ -954,7 +991,7 @@ async function main() {
     diplomes: DIPLOMES, classes_effectif: CLASSES_EFF, sections: SECTIONS, regions: Object.keys(REGIONS), departements: nomsDep || {},
     serie: ft.serie,
     region_suivie: REGION ? { nom: REGION.nom, deps: [...DEPS_REGION], rayon_km: REGION.rayon_km, centres: REGION.centres.map(c => c.ville) } : null,
-    nb_recruteurs_lba: lba.recruteurs.length, qualite, offres,
+    nb_recruteurs_lba: lba.recruteurs.length, qualite, offres, offres_signalees: signalees,
   };
   const json = JSON.stringify(sortie);
   const entete = "/* généré par scripts/alternance.mjs — ne pas modifier à la main */\n";

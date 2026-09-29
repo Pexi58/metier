@@ -19,7 +19,7 @@ const sansAccents = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, ""
 const PAS = 24;
 
 /* ---- État ---- */
-const DEFAUT = { c: "alternance", m: D.metier_par_defaut || "*", z: "", q: "", d: DUREES.map((_, i) => i).join(","), e: "0", r: "0", s: "0", tri: "date" };
+const DEFAUT = { c: "alternance", m: D.metier_par_defaut || "*", z: "", q: "", d: DUREES.map((_, i) => i).join(","), e: "0", r: "0", s: "0", tri: "fiabilite", v: "0" };
 let E = { ...DEFAUT }, montrees = PAS;
 (function lire() {
   const p = new URLSearchParams(location.hash.slice(1)), ch = Site.lireChoix();
@@ -46,6 +46,7 @@ function selection() {
     if (E.e !== "1" && o.ecole) return false;
     if (E.r === "1") { const a = age(o); if (a == null || a >= 30) return false; }
     if (E.s === "1" && !Site.salUtile(o)) return false;
+    if (E.v === "1" && (o.alertes || []).length) return false;
     if (o.contrat === "stage" && !durees.has(o.duree_classe || DUREES.at(-1))) return false;
     if (mots.length) { const t = sansAccents(`${o.titre} ${o.ent} ${o.ville} ${o.lieu}`); if (!mots.every(w => t.includes(w))) return false; }
     return true;
@@ -54,7 +55,7 @@ function selection() {
 const libMetier = () => E.m === "*" ? "tous les métiers" : E.m.startsWith("g:") ? `groupe ${E.m.slice(2)}` : METIER[E.m].libelle;
 const libZone = () => !E.z ? "France entière" : E.z.startsWith("dep:") ? libDep(E.z.slice(4)) : E.z.slice(4);
 const decrire = () => [`offres : ${({ alternance: "alternance", stage: "stages", tous: "alternance et stages" })[E.c]}`, `métier : ${libMetier()}`, `zone : ${libZone()}`,
-  E.q ? `recherche « ${E.q} »` : null, E.e === "1" ? "écoles comprises" : "offres d'écoles retirées", E.r === "1" ? "moins de 30 jours" : null, E.s === "1" ? "avec salaire" : null].filter(Boolean).join(" · ");
+  E.q ? `recherche « ${E.q} »` : null, E.e === "1" ? "écoles comprises" : "offres d'écoles retirées", E.r === "1" ? "moins de 30 jours" : null, E.s === "1" ? "avec salaire" : null, E.v === "1" ? "sans les offres à vérifier" : null].filter(Boolean).join(" · ");
 
 /* ---- Rendu ---- */
 function carte(o) {
@@ -66,13 +67,14 @@ function carte(o) {
     o.diplome ? `<span class="badge">${esc(o.diplome)}</span>` : "",
     o.ecole ? `<span class="badge ecole">école</span>` : "",
     a != null && a < 7 ? `<span class="badge ok">nouvelle</span>` : "",
+    Site.badgeAlerte(o),
   ].join("");
   const via = o.src === "FT" && o.via && o.via !== "France Travail" ? `France Travail via ${o.via}` : (o.via || SOURCES[o.src]);
   return `<article class="offre">
     <div class="etiquettes">${etiq}</div>
     <h3>${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.titre)}</a>` : esc(o.titre)}</h3>
-    <div class="qui">${esc(o.ent || "Employeur non précisé")}${o.eff ? ` <span class="note">· ${esc(o.eff)} salariés</span>` : ""}</div>
-    <div class="infos"><span>📍 ${esc(o.ville || o.lieu || "Lieu non précisé")}${o.dep ? ` (${esc(o.dep)})` : ""}</span>${o.sal_bareme ? `<span title="L'annonce recopie le barème légal de l'apprentissage (27 % à 100 % du SMIC) : le montant réel dépend de l'âge et de l'année de contrat">Salaire : barème légal</span>` : o.smin ? `<span class="sal">${nb(o.smin)}${o.smax > o.smin ? "–" + nb(o.smax) : ""} € brut/mois</span>` : ""}<span>${(METIER[o.rome] || {}).libelle || ""}</span></div>
+    <div class="qui">${esc(o.ent || "Employeur non précisé")}${o.eff ? ` <span class="note">· ${esc(/salari/.test(o.eff) ? o.eff : o.eff + " salariés")}</span>` : ""}</div>
+    <div class="infos"><span>📍 ${esc(o.ville || o.lieu || "Lieu non précisé")}${o.dep ? ` (${esc(o.dep)})` : ""}</span>${Site.salaireAffiche(o)}<span>${(METIER[o.rome] || {}).libelle || ""}</span></div>
     <div class="bas"><span>${quand} · ${esc(via)}</span>${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">Voir l'annonce →</a>` : ""}</div>
   </article>`;
 }
@@ -86,10 +88,19 @@ function rendre() {
   const t = selection();
   if (E.tri === "salaire") t.sort((a, b) => (b.smin || -1) - (a.smin || -1));
   else if (E.tri === "ville") t.sort((a, b) => String(a.ville).localeCompare(String(b.ville), "fr"));
-  else t.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  else if (E.tri === "date") t.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  // Par défaut : les offres les plus complètes et les plus fiables d'abord (Site.fiabilite), puis les plus récentes.
+  else t.sort((a, b) => Site.fiabilite(b) - Site.fiabilite(a) || String(b.date).localeCompare(String(a.date)));
   courante = t;
   document.getElementById("o-surtitre").textContent = `Offres disponibles · collecte du ${dateFr(D.date)}`;
   document.getElementById("o-compte").innerHTML = `${nb(t.length)} offre${t.length > 1 ? "s" : ""} <span class="note" style="font-weight:400">— ${esc(libMetier())}, ${esc(libZone())}</span>`;
+  // Ce qui a été écarté ou signalé, dit à chaque affichage (les nombres suivent la collecte du jour).
+  const douteuses = t.filter(o => (o.alertes || []).length).length, retirees = D.offres_signalees || [];
+  document.getElementById("o-retirees").innerHTML = (douteuses ? `${nb(douteuses)} offre${douteuses > 1 ? "s" : ""} marquée${douteuses > 1 ? "s" : ""} « ⚠ à vérifier »${E.tri === "fiabilite" ? `, rangée${douteuses > 1 ? "s" : ""} en fin de liste` : ""}. ` : "")
+    + (retirees.length ? `${nb(retirees.length)} annonce${retirees.length > 1 ? "s" : ""} sans poste réel retirée${retirees.length > 1 ? "s" : ""} (« on ne recrute pas », test…) : <button class="lien-verif" id="o-voir-retirees">les voir</button>` : "");
+  const bR = document.getElementById("o-voir-retirees");
+  if (bR) bR.addEventListener("click", () => Verif.ouvrir({ titre: "Annonces retirées : elles ne proposent pas de poste", calcul: { num: retirees.length, den: null, texte: "Annonces repérées par les listes « annonces_sans_poste » de config/alternance.json ; elles ne comptent dans aucun chiffre" },
+    filtres: "toutes les sources, sans filtre", offres: retirees, base: retirees, valeur: o => o.titre }));
   document.getElementById("o-liste").innerHTML = t.length ? t.slice(0, montrees).map(carte).join("")
     : `<div class="vide-offres carte" style="grid-column:1/-1">Aucune offre ne correspond. Élargissez la zone, changez de métier, ou cochez « Inclure les offres d'écoles ».</div>`;
   const b = document.getElementById("o-plus");
@@ -118,6 +129,7 @@ document.getElementById("o-tri").value = E.tri;
 document.getElementById("o-ecoles").checked = E.e === "1";
 document.getElementById("o-recentes").checked = E.r === "1";
 document.getElementById("o-salaire").checked = E.s === "1";
+document.getElementById("o-fiables").checked = E.v === "1";
 
 const change = (k, v) => { E[k] = v; montrees = PAS; rendre(); };
 document.getElementById("o-contrat").addEventListener("click", e => { const b = e.target.closest("button"); if (b) change("c", b.dataset.c); });
@@ -127,6 +139,7 @@ document.getElementById("o-tri").addEventListener("change", e => change("tri", e
 document.getElementById("o-ecoles").addEventListener("change", e => change("e", e.target.checked ? "1" : "0"));
 document.getElementById("o-recentes").addEventListener("change", e => change("r", e.target.checked ? "1" : "0"));
 document.getElementById("o-salaire").addEventListener("change", e => change("s", e.target.checked ? "1" : "0"));
+document.getElementById("o-fiables").addEventListener("change", e => change("v", e.target.checked ? "1" : "0"));
 let minuteur;
 document.getElementById("o-mot").addEventListener("input", e => { clearTimeout(minuteur); minuteur = setTimeout(() => change("q", e.target.value.trim()), 250); });
 document.getElementById("o-durees-bloc").addEventListener("click", e => {

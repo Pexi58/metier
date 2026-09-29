@@ -89,6 +89,16 @@ ne consomme pas le quota.
    montre les offres concernées.
 8. **Compétences** : les pourcentages ne portent que sur les offres dont on a le texte complet (France Travail,
    La bonne alternance) ; Adzuna n'en donne qu'un extrait.
+9. **Annonces sans poste réel** (« On ne recrute pas » dans le titre, le texte ou à la place du nom de l'employeur,
+   annonce test, vivier de CV, candidature spontanée, poste déjà pourvu) : **retirées de tous les chiffres** et
+   listées à part (page Offres : « les voir »). Deux listes dans `config/alternance.json` (`annonces_sans_poste`) :
+   une large pour le titre, une stricte pour le texte (« merci de ne pas postuler si… » n'est pas une annonce vide).
+10. **Salaires invraisemblables** (au-delà de 1,4 × SMIC pour une alternance, 1,2 × SMIC pour un stage, fourchette
+   au-delà de 2,2 × SMIC, ou montant illisible) : l'offre reste, son salaire **sort des statistiques** et s'affiche
+   barré avec ⚠. Seuils dans `config/alternance.json` (`salaire_vraisemblable`).
+11. **Badge « ⚠ à vérifier »** sur chaque offre visée par un contrôle de sens, avec la raison. Sur la page Offres,
+   le tri par défaut met **les offres les plus complètes et fiables d'abord** (employeur nommé, salaire exploitable,
+   texte complet, lieu exact, récente, sans alerte) ; une case permet de masquer les offres à vérifier.
 
 ## Les fichiers
 

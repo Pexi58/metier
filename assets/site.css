@@ -133,3 +133,8 @@ table.legal small { color:var(--gris); }
 /* À lire avec prudence (contrôles de sens). */
 .vigilance li { cursor:pointer; } .vigilance li:hover b, .vigilance li:focus-visible b { text-decoration:underline; }
 .titres { margin:8px 0 0; padding-left:18px; font-size:.9rem; color:var(--gris); }
+
+/* Offres douteuses. */
+.badge.alerte { background:#fff4e5; border-color:#ffc27a; color:#8a4b00; }
+.sal-douteux { color:#8a4b00; text-decoration:line-through; text-decoration-color:#ffc27a; }
+.retirees { margin:6px 0 0; font-size:.88rem; }

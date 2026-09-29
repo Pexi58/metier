@@ -577,9 +577,10 @@ function rendreListe(sel) {
       o.interim ? `<span class="badge interim">intérim / cabinet</span>` : "",
       o.annonces > 1 ? `<span class="badge" title="La même annonce a été publiée ${o.annonces} fois ; elle n'est comptée qu'une fois.">publiée ${o.annonces} fois</span>` : "",
       o.rome_deduit ? `<span class="badge" title="Métier déduit des mots-clés de la recherche">métier déduit</span>` : "",
+      Site.badgeAlerte(o),
     ].join(" ");
     return `<div class="item"><div class="titre">${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.titre)}</a>` : esc(o.titre)}</div>
-      <div class="meta">${o.ent ? `<button class="lien-ent" data-i="${i}">${esc(o.ent)}</button>` : "employeur non précisé"} · ${esc(o.lieu || "lieu non précisé")} · ${esc(o.type)}${o.diplome ? " · " + esc(o.diplome) : ""}${o.duree ? ` · ${o.duree} mois` : ""}${o.smin ? ` · <span class="sal">${euro(o.smin)}${o.smax > o.smin ? " à " + euro(o.smax) : ""} brut/mois</span>` : ""} · publiée le ${dateFr(o.date)}${a != null ? ` (${a} j)` : ""} ${badges}</div></div>`;
+      <div class="meta">${o.ent ? `<button class="lien-ent" data-i="${i}">${esc(o.ent)}</button>` : "employeur non précisé"} · ${esc(o.lieu || "lieu non précisé")} · ${esc(o.type)}${o.diplome ? " · " + esc(o.diplome) : ""}${o.duree ? ` · ${o.duree} mois` : ""}${Site.salaireAffiche(o) ? " · " + Site.salaireAffiche(o) : ""} · publiée le ${dateFr(o.date)}${a != null ? ` (${a} j)` : ""} ${badges}</div></div>`;
   }).join("");
   document.getElementById("liste").querySelectorAll(".lien-ent").forEach(b => b.addEventListener("click", () => ficheEmployeur(t[Number(b.dataset.i)])));
   document.getElementById("b-plus").hidden = listeN >= t.length;
@@ -710,9 +711,11 @@ function rendreQualite() {
     ["Position : exacte / centre de la commune / centre du département / aucune", `${nb(pos.offre || 0)} / ${nb(pos.commune || 0)} / ${nb(pos.departement || 0)} / ${nb(pos.aucune || 0)}`],
     ["Offres de plus de 90 jours", q.anciennes_90j],
     ["Salaire : barème légal recopié au lieu d'un montant (écarté des médianes)", q.bareme_recopie || 0],
+    ["Salaire invraisemblable pour le contrat (montant gardé et signalé, écarté des statistiques)", q.salaires_invraisemblables || 0],
+    ["Annonces sans poste réel (« on ne recrute pas », test, vivier…) retirées de tous les chiffres", q.sans_poste || 0],
   ];
   // Contrôles de sens : ce qui est douteux dans le contenu des offres, recompté à chaque collecte.
-  const vig = q.vigilance || [], parId = new Map(D.offres.map(o => [o.id, o]));
+  const vig = q.vigilance || [], parId = new Map(Site.toutesOffres().map(o => [o.id, o]));
   document.getElementById("q-vigilance").innerHTML = vig.length ? `<table class="q">` + vig.map((v, i) => `<tr><td class="n">${nb(v.n)}</td><td>${v.n ? `<button class="lien-verif" data-v="${i}">${esc(v.nom)}</button>` : `<b>${esc(v.nom)}</b>`}<br><span class="note">${esc(v.detail)}</span></td></tr>`).join("") + `</table>` : "<p class=\"note\">Relancez la collecte pour obtenir ces contrôles.</p>";
   document.querySelectorAll("#q-vigilance button[data-v]").forEach(b => b.addEventListener("click", () => {
     const v = vig[+b.dataset.v], off = v.ids.map(id => parId.get(id)).filter(Boolean);
