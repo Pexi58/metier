@@ -55,13 +55,14 @@ METIERS = {
     "M1426": ("Chief digital officer", "Digital", True),
     "M1719": ("Chargé(e) des relations avec les influenceurs", "Digital", True),
     "E1406": ("Influenceur(se) web", "Digital", True),
-    # Communication et commerce, à la frontière
-    "E1112": ("Chargé(e) de communication", "Frontière", False),
-    "E1103": ("Chargé(e) des relations publiques", "Frontière", False),
-    "E1107": ("Chef(fe) de projet événementiel", "Frontière", False),
-    "E1404": ("Assistant(e) en publicité", "Frontière", False),
-    "D1506": ("Chargé(e) de merchandising", "Frontière", False),
-    "D1415": ("Chargé(e) de relation client (CRM)", "Frontière", False),
+    "E1127": ("Brand manager / brand content", "Digital", True),
+    # Communication et commerce : métiers voisins, décochés par défaut
+    "E1112": ("Chargé(e) de communication", "Communication et commerce", False),
+    "E1103": ("Chargé(e) des relations publiques", "Communication et commerce", False),
+    "E1107": ("Chef(fe) de projet événementiel", "Communication et commerce", False),
+    "E1404": ("Assistant(e) en publicité", "Communication et commerce", False),
+    "D1415": ("Chargé(e) de relation client (CRM)", "Communication et commerce", False),
+    "D1510": ("Responsable / chef de secteur GMS", "Communication et commerce", False),
 }
 
 TOKEN_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire"

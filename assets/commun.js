@@ -1,6 +1,6 @@
 /* ============================================================
    commun.js — ce que les cinq pages partagent.
-   Chargé par index.html, salaires.html, exigences.html,
+   Chargé par marche.html, salaires.html, exigences.html,
    recruteurs.html et mouvement.html, après Chart.js.
 
    Tout est déclaré au premier niveau : le petit script de chaque
@@ -59,7 +59,7 @@ const dateFr = (s, bref = false) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(
 const age = o => { const jour = Date.parse(D.date), t = Date.parse(o.date); return (isFinite(jour) && isFinite(t)) ? (jour - t) / 86400000 : null; };
 
 const couleur = "#0a5cff", pale = "rgba(10,92,255,.25)";
-const COULEURS = { Marketing: "#0a5cff", Digital: "#ff6a00", Frontière: "#8e8e93" };
+const COULEURS = { Marketing: "#0a5cff", Digital: "#ff6a00", "Communication et commerce": "#8e8e93" };
 // Palette des niveaux : du clair au foncé, assistant → directeur, « autre » en gris. Valable sur toute la page.
 const COUL_NIV = { assistant: "#a7c9ff", charge: "#5f9bf5", responsable: "#2a6ad4", directeur: "#123a7a", autre: "#b4b4bc" };
 // Sur ces trois teintes claires, le texte blanc n'est pas lisible : on écrit en encre foncée.
@@ -217,14 +217,14 @@ function filtrer(f) {
    4) NAVIGATION ET PANNEAU DE FILTRES, IDENTIQUES PARTOUT
    ============================================================ */
 const PAGES = [
-  ["index.html", "Accueil"],
+  ["marche.html", "Tout le marché"],
   ["salaires.html", "Ce que ça paie"],
   ["exigences.html", "Ce qu'on vous demande"],
   ["recruteurs.html", "Qui recrute"],
   ["mouvement.html", "Le marché bouge"],
 ];
 // Chemins relatifs partout : le site vit dans un sous-dossier (/metier/) sur GitHub Pages.
-const PAGE_ICI = (location.pathname.split("/").pop() || "index.html");
+const PAGE_ICI = (location.pathname.split("/").pop() || "marche.html");
 
 const HTML_FILTRES = `
   <div class="filtres">
@@ -252,10 +252,11 @@ const HTML_FILTRES = `
 function poserNavEtFiltres() {
   const n = document.getElementById("nav-ici");
   if (n) n.outerHTML = `<nav class="nav">` + PAGES.map(([url, lib]) =>
-    `<a href="${url}"${url === PAGE_ICI ? ' class="ici" aria-current="page"' : ""}>${lib}</a>`).join("") + `</nav>`;
+    `<a href="${url}"${url === PAGE_ICI ? ' class="ici" aria-current="page"' : ""}>${lib}</a>`).join("")
+    + `<a href="presentation.html" style="margin-left:auto;font-weight:600">Alternance et stages →</a></nav>`;
 
   const f = document.getElementById("filtres-ici");
-  if (f) f.outerHTML = (PAGE_ICI === "index.html"
+  if (f) f.outerHTML = (PAGE_ICI === "marche.html"
     // Accueil : le panneau est déplié, c'est le point de départ.
     ? `<div class="carte">${HTML_FILTRES}</div>`
     // Ailleurs : replié, on vient lire une page, pas refaire ses filtres.
@@ -267,7 +268,7 @@ function poserNavEtFiltres() {
     `<p style="margin:0 0 8px"><a href="mouvement.html#limites">Limites de ces chiffres</a></p>
      Chaîne : API France Travail → <code>scripts/extraire.py</code> → <code>data/brut/</code> (chaque version d'annonce, une seule fois) + <code>data/actives/</code> (les offres du jour) → <code>scripts/resumer.py</code> → <code>data/resume.json</code> → ces pages (GitHub Pages).
      Une Action GitHub relance la collecte chaque matin à 7 h. Identifiants dans les secrets du dépôt, jamais dans le code.
-     Dépôt de démonstration — M2 MOD, IAE Clermont Auvergne, séminaires métiers.`;
+     Ces pages reprennent la base et les graphiques du cours d'analyse de données (M2 MOD, IAE Clermont Auvergne) ; la veille alternance et stages est l'ajout propre à ce dépôt : <a href="presentation.html">Synthèse</a>.`;
 }
 
 /* ============================================================

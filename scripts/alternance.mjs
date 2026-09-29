@@ -55,6 +55,11 @@ const cle = nom => { const v = process.env[nom]; return v && !/^(PAR_votre|votre
 
 const CONFIG = JSON.parse(fs.readFileSync(path.join(RACINE, "config", "alternance.json"), "utf8"));
 const METIERS = new Map(CONFIG.metiers.map(m => [m.code, m]));
+// Intitulés qui ne sont pas du marketing, même classés dans un métier suivi (config : titres_hors_sujet).
+const RX_HORS_SUJET = (CONFIG.titres_hors_sujet || []).length ? new RegExp(CONFIG.titres_hors_sujet.join("|")) : null;
+const RX_SAUVE = /\b(marketing|communication|publicite|digital|digitale|web|e commerce|ecommerce|community|marque|brand|social media|seo|gms)\b/;
+// Minima légaux (config : remuneration_legale) : le SMIC sert à reconnaître le barème recopié tel quel.
+const LEGAL = CONFIG.remuneration_legale || { smic_mensuel: 1867.02 };
 const ORDRE_SOURCES = ["FT", "LBA", "ADZ"];
 
 const lireJson = (f, defaut) => { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch { return defaut; } };
@@ -303,6 +308,9 @@ async function sourceFT(journal) {
     offres.push(normaliserFT(v.offre, a.rome, v.vu_le));
   }
   journal.push({ source: "FT", statut: `dépôt du cours, extraction du ${jour}`, n: offres.length });
+  // Le dépôt peut contenir des métiers retirés de config/alternance.json (ex. D1506) : on ne les garde pas.
+  // (Compté avant ce filtre, pour que le recoupement avec resume.json porte sur les mêmes offres.)
+  offres = offres.filter(o => METIERS.has(o.rome));
 
   // L'API en direct, si les identifiants sont là : elle remplace le dépôt pour les métiers qu'elle couvre,
   // et couvre aussi les métiers ajoutés dans config/alternance.json.
@@ -465,6 +473,25 @@ function romeDepuisTitre(titre) {
   for (const m of MOTS_METIER) if (m.mots.length && m.mots.every(w => t.has(w)) && (!meilleur || m.mots.length > meilleur.mots.length)) meilleur = m;
   return meilleur ? meilleur.code : null;
 }
+// Sinon, l'offre ne garde le métier de la recherche que si son titre en cite au moins un mot :
+// « Commercial en alternance », remonté par la recherche « e-commerce », n'est pas un poste e-commerce.
+const titreCiteRecherche = (titre, m) => {
+  const t = new Set(normTitre(titre).split(" "));
+  return (MOTS_METIER.find(x => x.code === m.code) || { mots: [] }).mots.some(w => t.has(w));
+};
+// Dernier recours : le métier dont le titre partage le plus de mots distinctifs (« communication », « merchandising »…),
+// les mots de fonction (chargé, assistant, chef…) ne comptant pas. « Assistant communication - BTS », trouvé par la
+// recherche « relations publiques », va ainsi en Chargé(e) de communication au lieu d'être écarté.
+const MOTS_FONCTION = new Set("charge chargee assistant assistante chef cheffe responsable projet manager directeur directrice officer".split(" "));
+function romeProche(titre) {
+  const t = new Set(normTitre(titre).split(" "));
+  let meilleur = null, max = 0;
+  for (const m of MOTS_METIER) {
+    const k = m.mots.filter(w => !MOTS_FONCTION.has(w) && t.has(w)).length;
+    if (k > max) { max = k; meilleur = m.code; }
+  }
+  return meilleur;
+}
 
 // Adzuna annonce un salaire annuel ; pour l'alternance, beaucoup d'employeurs y mettent un montant mensuel.
 function mensuelAdzuna(v) {
@@ -503,10 +530,13 @@ async function sourceAdzuna(journal) {
   let quotaAtteint = false;
   // Deux collectes, chacune gardée en cache pour la journée : l'alternance, puis les stages.
   // (Adzuna gratuit : ~250 appels par jour ; un 2e lancement le même jour ne consomme rien.)
-  for (const [contrat, pagesFrance, pagesRegion] of [["alternance", 8, 4], ["stage", 3, 2]]) {
+  // Le nombre de pages est un plafond : une recherche s'arrête dès qu'elle a tout reçu. Seules les grosses
+  // recherches (ex. « chef de produit stage », 500 offres) vont au bout ; le total reste sous le quota du jour.
+  for (const [contrat, pagesFrance, pagesRegion] of [["alternance", 8, 4], ["stage", 12, 4]]) {
     const fCache = path.join(CACHE, `adzuna-${contrat}-${aujourdhui}.json`);
     const cache = lireJson(fCache, null);
-    if (cache) { toutes.push(...cache.offres); statuts.push(`${contrat} : ${cache.offres.length} (en cache du jour)`); continue; }
+    // Offres du cache sans métier : on retente avec la règle du dernier recours (elle a pu changer depuis).
+    if (cache) { for (const o of cache.offres) if (!o.rome) o.rome = romeProche(o.titre); toutes.push(...cache.offres); statuts.push(`${contrat} : ${cache.offres.length} (en cache du jour)`); continue; }
     if (quotaAtteint) { statuts.push(`${contrat} : non collecté (quota du jour atteint)`); continue; }
     const offres = [], vus = new Set(), erreurs = [], tronques = [];
     let appels = 0;
@@ -541,7 +571,7 @@ async function sourceAdzuna(journal) {
           const a = predit ? null : mensuelAdzuna(j.salary_min), b = predit ? null : mensuelAdzuna(j.salary_max || j.salary_min);
           const okSal = a && b && a.v >= SAL_MIN && b.v <= SAL_MAX;
           offres.push(offreAgregateur({
-            id: "ADZ-" + j.id, src: "ADZ", via: "Adzuna", rome: romeDepuisTitre(titre) || m.code, contrat, titre, desc,
+            id: "ADZ-" + j.id, src: "ADZ", via: "Adzuna", rome: romeDepuisTitre(titre) || (titreCiteRecherche(titre, m) ? m.code : romeProche(titre)), contrat, titre, desc,
             ent: (j.company && j.company.display_name) || "", lieu: (j.location && j.location.display_name) || "",
             ville: area[3] || area.at(-1) || "", dep: area.map(x => deps[norm(x)]).find(Boolean) || "",
             lat: j.latitude || null, lon: j.longitude || null, date: String(j.created || "").slice(0, 10), url: j.redirect_url || "",
@@ -694,12 +724,41 @@ function dedoublonner(offres, stats) {
     const d = parCle.get(k);
     if (!d) { o.annonces = 1; parCle.set(k, o); sortie.push(o); continue; }
     stats.proches++;
-    d.annonces++;
-    for (const s of o.srcs) if (!d.srcs.includes(s)) d.srcs.push(s);
-    // On complète ce qui manque à l'annonce gardée.
-    for (const c of ["smin", "smax", "sal_lib", "diplome", "lat", "lon", "duree", "siret"]) if (d[c] == null || d[c] === "") d[c] = o[c];
+    fusionner(d, o);
   }
-  return sortie;
+  // c) Même annonce relayée par un site d'emploi qui efface l'employeur et change la ville du titre
+  //    (« Chargé marketing - Massy (H/F) » publié par l'école, puis « … (F/H) » sans nom par DirectEmploi) :
+  //    même intitulé une fois la ville retirée, et même texte d'annonce ou même département,
+  //    à condition que l'une des deux ne nomme pas l'employeur (ou qu'elles nomment le même).
+  const parTitre = new Map(), finale = [];
+  for (const o of sortie) {
+    const t = titreSansLieu(o);
+    const liste = parTitre.get(o.contrat + "|" + t) || [];
+    // Deux offres qui nomment chacune leur employeur ne passent pas par ici (un même employeur peut
+    // recruter dans deux villes). Une seule nommée : même texte ou même département. Aucune : même texte.
+    const memeTexte = x => o.empreinte && o.empreinte === x.empreinte && o.empreinte !== EMPREINTE_VIDE;
+    const d = t && liste.find(x => (!x.ent !== !o.ent) ? memeTexte(x) || (o.dep && o.dep === x.dep) : !x.ent && !o.ent && memeTexte(x));
+    if (!d) { liste.push(o); parTitre.set(o.contrat + "|" + t, liste); finale.push(o); continue; }
+    stats.relais++;
+    if (process.env.DEBUG_DOUBLONS) console.log(`  relais : « ${d.titre} » ${d.ent || "—"} ${d.ville} (${d.dep})  <=  « ${o.titre} » ${o.ent || "—"} ${o.ville} (${o.dep})`);
+    fusionner(d, o);
+  }
+  return finale;
+}
+const EMPREINTE_VIDE = sha("");
+// Intitulé sans la ville ni le département (souvent ajoutés en fin de titre par les sites relais).
+function titreSansLieu(o) {
+  const lieu = new Set([...norm(o.ville).split(" "), ...norm(o.lieu).split(" "), o.dep].filter(Boolean));
+  return normTitre(o.titre).split(" ").filter(w => !lieu.has(w) && !/^\d+$/.test(w)).join(" ");
+}
+// L'annonce gardée prend ce qui lui manque chez son double — l'employeur compris : si le double est
+// publié par une école, la copie anonyme le sera aussi (et sera masquée avec les offres d'écoles).
+function fusionner(d, o) {
+  d.annonces++;
+  for (const s of o.srcs) if (!d.srcs.includes(s)) d.srcs.push(s);
+  if (d.smin == null && o.smin != null) for (const c of ["smin", "smax", "sal_lib", "sal_etat"]) d[c] = o[c];
+  if (!d.ent && o.ent) for (const c of ["ent", "naf", "secteur", "eff_lib", "siret"]) d[c] = o[c];
+  for (const c of ["diplome", "lat", "lon", "duree", "siret"]) if (d[c] == null || d[c] === "") d[c] = o[c];
 }
 
 /* ============================================================
@@ -742,6 +801,45 @@ function controler(offres, ctx) {
   return c;
 }
 
+/* Contrôles de sens : les contrôles ci-dessus vérifient la forme (identifiants, dates, liens) ; ceux-ci
+   comptent les offres dont le CONTENU est douteux. Ils ne bloquent rien : ils disent combien d'offres
+   sont à lire avec prudence, et lesquelles (identifiants, pour les retrouver dans la page). */
+function controlerSens(offres) {
+  const v = [];
+  const ajoute = (nom, liste, detail) => v.push({ nom, n: liste.length, detail, ids: liste.slice(0, 200).map(o => o.id) });
+  const alt = offres.filter(o => o.contrat === "alternance"), stages = offres.filter(o => o.contrat === "stage");
+  ajoute("Alternances dont l'intitulé parle de stage", alt.filter(o => o.ambigu),
+    "classées en alternance par la source, mais le titre dit « stage » : le contrat réel est peut-être un stage");
+  // Ville citée dans le titre (« … - Massy (H/F) ») différente du lieu de l'offre.
+  const villes = new Set(offres.map(o => norm(o.ville)).filter(v => v.length > 2));
+  const villeTitre = o => { const m = /\s[-–]\s*([^-–(]+?)\s*(\([^)]*\))?\s*$/.exec(o.titre || ""); return m ? norm(m[1]) : ""; };
+  ajoute("Ville du titre différente du lieu de l'offre", offres.filter(o => { const t = villeTitre(o); return t && villes.has(t) && o.ville && !norm(o.ville).includes(t); }),
+    "souvent une annonce relayée par un site d'emploi, placée ailleurs que le poste : la carte peut se tromper");
+  const smic = LEGAL.smic_mensuel, grat = (LEGAL.gratification_horaire || 4.35) * (LEGAL.heures_mois || 151.67);
+  ajoute("Barème légal recopié au lieu d'un salaire", offres.filter(o => o.sal_bareme),
+    "fourchette « 27 % à 100 % du SMIC » : ce n'est pas ce que l'employeur propose ; retirée des médianes de salaire");
+  ajoute("Rémunération sous le minimum légal", [...alt.filter(o => o.smin != null && o.smin < 0.25 * 0.94 * smic),
+    ...stages.filter(o => o.smin != null && o.smin < 0.9 * grat)],
+    `alternance sous 27 % du SMIC, ou stage sous la gratification minimale (${Math.round(grat)} € par mois à temps plein) : erreur de saisie ou temps partiel`);
+  ajoute("Intitulés de niveau direction", offres.filter(o => /\b(directeur|directrice|director|chief|head of|cmo|cdo)\b/.test(norm(o.titre))),
+    "rares pour une alternance ou un stage : souvent un « assistant(e) de direction » ou un métier mal classé");
+  const sansDuree = stages.filter(o => o.duree == null);
+  ajoute("Stages sans durée connue", sansDuree,
+    `${stages.length ? Math.round(100 * sansDuree.length / stages.length) : 0} % des stages : les agrégateurs ne donnent qu'un extrait de l'annonce`);
+  ajoute("Métier déduit d'une recherche par mots-clés", offres.filter(o => o.rome_deduit && !romeDepuisTitre(o.titre)),
+    "offres Adzuna : le titre ne contient pas tous les mots du métier, le métier est celui de la recherche qui les a trouvées");
+  return v;
+}
+// Les intitulés réels les plus fréquents d'un métier (sans « alternance », « H/F » ni la ville) : ce que recouvre le code.
+function titresFrequents(liste) {
+  // Regroupés sur l'intitulé normalisé, montrés avec le libellé d'une annonce (sans « H/F » ni la ville).
+  const propre = o => String(o.titre).replace(/\(?\b[HF]\s*[/.]\s*[FH]\b\)?/gi, "").replace(/\s[-–]\s*[^-–]*$/, m => norm(m).includes(norm(o.ville).split(" ")[0] || "§") ? "" : m)
+    .replace(/^\s*(alternance|alternant\(?e?\)?|apprenti\(?e?\)?|stage)\s*[-–:]?\s*/i, "").replace(/\s+en (alternance|apprentissage)\b/i, "").replace(/(\s*[-–|:]\s*)+$/, "").replace(/\s{2,}/g, " ").trim();
+  const c = new Map();
+  for (const o of liste) { const t = titreSansLieu(o); if (!t) continue; const x = c.get(t) || { t: propre(o), n: 0 }; x.n++; c.set(t, x); }
+  return [...c.values()].sort((a, b) => b.n - a.n).slice(0, 5);
+}
+
 /* ============================================================
    8) LA CHAÎNE
    ============================================================ */
@@ -757,17 +855,23 @@ async function main() {
   const brutes = [...ft.offres, ...lba.offres, ...adz];
   // France Travail et La bonne alternance ne donnent ici que des alternances.
   for (const o of brutes) if (!o.contrat) o.contrat = "alternance";
+  // Métier retiré de la config depuis la mise en cache (ex. D1506) : Adzuna reclasse par le titre, sinon l'offre sort.
+  for (const o of brutes) if (o.rome && !METIERS.has(o.rome)) o.rome = o.src === "ADZ" ? romeProche(o.titre) : null;
+  for (let i = brutes.length - 1; i >= 0; i--) if (!brutes[i].rome && brutes[i].src !== "ADZ") brutes.splice(i, 1);
   // Les agrégateurs cherchent aussi dans le texte : « stage marketing » ramène des stages d'ingénieur qui citent
   // le mot une fois. On ne garde que les offres dont le TITRE correspond à un métier suivi ou à son vocabulaire.
-  const RX_VOCABULAIRE = /\b(marketing|communication|com|commercial|commerciale|commerce|digital|digitale|numerique|web|produit|produits|brand|marque|ecommerce|social|media|medias|seo|sea|crm|client|clients|clientele|evenementiel|evenement|evenements|merchandising|publicite|pub|influence|influenceur|contenu|contenus|redaction|redacteur|etudes|trade|vente|ventes|acquisition|growth|community|presse|influencer|influenceurs|ugc|traffic|trafic|content|brand|copywriter|graphiste|design|designer|social media|ads|sem|ecommerce|retail|categorie|category|partenariats?|campagnes?|business developer|chef de projet)\b/;
-  const pertinente = o => o.src !== "ADZ" || romeDepuisTitre(o.titre) || RX_VOCABULAIRE.test(norm(o.titre));
-  const horsSujet = brutes.filter(o => !pertinente(o));
-  for (let i = brutes.length - 1; i >= 0; i--) if (!pertinente(brutes[i])) brutes.splice(i, 1);
-  journal.push({ source: "Filtre", n: horsSujet.length, statut: `offres d'agrégateurs écartées car leur titre ne correspond à aucun métier suivi (ex. ${horsSujet.slice(0, 3).map(o => `« ${o.titre} »`).join(", ")})` });
+  const RX_VOCABULAIRE = /\b(marketing|communication|com|commercial|commerciale|commerce|digital|digitale|numerique|web|produit|produits|brand|marque|ecommerce|social|media|medias|seo|sea|crm|client|clients|clientele|evenementiel|evenement|evenements|merchandising|publicite|pub|influence|influenceur|contenu|contenus|redaction|redacteur|etudes|trade|vente|ventes|acquisition|growth|community|presse|influencer|influenceurs|ugc|traffic|trafic|content|brand|copywriter|graphiste|design|designer|social media|ads|sem|ecommerce|retail|categorie|category|partenariats?|campagnes?|business developer|chef de projet|gms|grande distribution|chef de secteur)\b/;
+  const pertinenteAgregateur = o => o.src !== "ADZ" || (o.rome && (romeDepuisTitre(o.titre) || RX_VOCABULAIRE.test(norm(o.titre))));
+  // Toutes sources : les intitulés de la liste « titres_hors_sujet » (config), sauf s'ils citent aussi le marketing.
+  const horsSujetTitre = o => RX_HORS_SUJET && RX_HORS_SUJET.test(norm(o.titre)) && !RX_SAUVE.test(norm(o.titre));
+  const horsSujet = brutes.filter(o => !pertinenteAgregateur(o)), horsListe = brutes.filter(o => pertinenteAgregateur(o) && horsSujetTitre(o));
+  for (let i = brutes.length - 1; i >= 0; i--) if (!pertinenteAgregateur(brutes[i]) || horsSujetTitre(brutes[i])) brutes.splice(i, 1);
+  journal.push({ source: "Filtre", n: horsSujet.length, statut: `offres d'agrégateurs écartées car leur titre ne correspond pas au métier cherché (ex. ${horsSujet.slice(0, 3).map(o => `« ${o.titre} »`).join(", ")})` });
+  journal.push({ source: "Filtre hors sujet", n: horsListe.length, statut: `offres écartées, toutes sources, car leur intitulé n'est pas du marketing (liste « titres_hors_sujet » de config/alternance.json ; ex. ${horsListe.slice(0, 3).map(o => `« ${o.titre} »`).join(", ")})` });
   const parSource = {};
   for (const o of brutes) parSource[o.src] = (parSource[o.src] || 0) + 1;
 
-  const dd = { meme_id: 0, proches: 0 };
+  const dd = { meme_id: 0, proches: 0, relais: 0 };
   const offres = dedoublonner(brutes, dd);
 
   // Positions manquantes : centre de la commune, sinon du département.
@@ -786,6 +890,14 @@ async function main() {
   const ent = {};
   await croiserEntreprises(offres, ent);
 
+  // Salaire : « 486 € à 1 801 € » n'est pas une offre, c'est le barème légal de l'apprentissage recopié en entier
+  // (27 % du SMIC à 100 % du SMIC, avec le SMIC de l'année où l'annonce a été saisie : d'où une marge de 6 %).
+  const smic = LEGAL.smic_mensuel;
+  for (const o of offres) o.sal_bareme = o.smin != null && o.smin >= 0.25 * 0.94 * smic && o.smin <= 0.29 * smic && o.smax >= 0.94 * smic && o.smax <= 1.03 * smic;
+  // Une alternance dont l'intitulé dit « stage » : on la garde, mais on la signale.
+  for (const o of offres) if (o.contrat === "alternance" && /\b(stage|stagiaire)\b/.test(norm(o.titre)))
+    o.ambigu = /\b(alternance|alternant|apprenti|apprentissage)\b/.test(norm(o.titre)) ? "stage ou alternance" : "« stage » dans le titre";
+
   // Noms des départements, pour l'affichage (« Haute-Savoie (74) » plutôt que « 74 »).
   const fNoms = path.join(CACHE, "departements-noms.json");
   let nomsDep = lireJson(fNoms, null);
@@ -798,6 +910,7 @@ async function main() {
   const jourRef = direct || !ft.jour ? new Date().toISOString().slice(0, 10) : ft.jour;
   const age = d => (Date.parse(jourRef) - Date.parse(d)) / 86400000;
   const controles = controler(offres, { jour: ft.jour, jourRef, nFTdepot });
+  const vigilance = controlerSens(offres);
 
   // On retire des sorties le champ de travail du dédoublonnage.
   for (const o of offres) delete o.empreinte;
@@ -805,7 +918,8 @@ async function main() {
     brutes: brutes.length, par_source: parSource, retenues: offres.length,
     par_contrat: { alternance: offres.filter(o => o.contrat === "alternance").length, stage: offres.filter(o => o.contrat === "stage").length },
     durees_stage: offres.filter(o => o.contrat === "stage").reduce((a, o) => (a[o.duree_classe] = (a[o.duree_classe] || 0) + 1, a), {}),
-    doublons_meme_id: dd.meme_id, doublons_proches: dd.proches,
+    doublons_meme_id: dd.meme_id, doublons_proches: dd.proches, doublons_relais: dd.relais,
+    bareme_recopie: offres.filter(o => o.sal_bareme).length,
     sans_entreprise: offres.filter(o => !o.ent).length,
     sans_lieu: offres.filter(o => !o.dep).length,
     positions: offres.reduce((a, o) => (a[o.prec || "aucune"] = (a[o.prec || "aucune"] || 0) + 1, a), {}),
@@ -814,18 +928,28 @@ async function main() {
     ecoles: offres.filter(o => o.ecole).length, interim: offres.filter(o => o.interim).length,
     entreprises: { noms_distincts: ent.noms, offres_identifiees: ent.identifiees, homonymes_rejetes: ent.incoherentes, appels: ent.appels },
     anciennes_90j: offres.filter(o => o.date && age(o.date) > 90).length,
-    sources: journal, controles,
+    sources: journal, controles, vigilance,
   };
 
+  // Métiers vides : sans aucune offre ce matin (alternance ou stage), ils ne sont pas publiés — ni dans les listes,
+  // ni dans les graphiques. Ils restent suivis (config) et reviennent d'eux-mêmes le jour où une offre paraît.
+  const avecOffres = new Set(offres.map(o => o.rome));
+  const metiersVides = CONFIG.metiers.filter(m => !avecOffres.has(m.code));
+  if (metiersVides.length) console.log(`Métiers sans offre ce matin, non publiés : ${metiersVides.map(m => `${m.libelle} (${m.code})`).join(", ")}`);
   const sortie = {
     genere_le: new Date().toISOString(),
     date: jourRef, date_ft: ft.jour,
-    metiers: CONFIG.metiers.map(m => ({ code: m.code, libelle: m.libelle, groupe: m.groupe,
+    metiers_vides: metiersVides.map(m => ({ code: m.code, libelle: m.libelle })),
+    metiers: CONFIG.metiers.filter(m => avecOffres.has(m.code)).map(m => ({ code: m.code, libelle: m.libelle, groupe: m.groupe,
       alt: offres.filter(o => o.rome === m.code && o.contrat === "alternance").length,
       stage: offres.filter(o => o.rome === m.code && o.contrat === "stage").length, total_ft: ft.totaux[m.code] || 0,
-      alt_ft: offres.filter(o => o.rome === m.code && o.src === "FT").length })),
+      // Même source et même jour que total_ft (data/actives, avant nettoyage) : la part de l'alternance est cohérente.
+      alt_ft: (ft.serie.length ? ft.serie.at(-1).alt[m.code] : 0) || 0,
+      titres_frequents: titresFrequents(offres.filter(o => o.rome === m.code && !o.ecole)) })),
+    remuneration_legale: LEGAL,
     classes_duree: CLASSES_DUREE,
-    metier_par_defaut: CONFIG.metier_par_defaut, zone_par_defaut: CONFIG.zone_par_defaut || "",
+    // Si le métier par défaut est vide ce matin, les pages ouvrent sur « tous les métiers ».
+    metier_par_defaut: avecOffres.has(CONFIG.metier_par_defaut) ? CONFIG.metier_par_defaut : "*", zone_par_defaut: CONFIG.zone_par_defaut || "",
     naf_par_groupe: CONFIG.naf_par_groupe, outils: Object.keys(CONFIG.outils),
     diplomes: DIPLOMES, classes_effectif: CLASSES_EFF, sections: SECTIONS, regions: Object.keys(REGIONS), departements: nomsDep || {},
     serie: ft.serie,
@@ -848,12 +972,15 @@ async function main() {
   // ---- Le rapport, lisible dans le terminal ----
   console.log(`\nSources :`);
   for (const s of journal) console.log(`  ${s.source.padEnd(20)} ${String(s.n).padStart(5)}  ${s.statut}`);
-  console.log(`\n${brutes.length} offres lues -> ${offres.length} retenues (${dd.meme_id} doublons même identifiant, ${dd.proches} annonces republiées fusionnées)`);
+  console.log(`\n${brutes.length} offres lues -> ${offres.length} retenues (${dd.meme_id} doublons même identifiant, ${dd.proches} annonces republiées fusionnées, ${dd.relais} copies de sites relais fusionnées)`);
   console.log(`Employeurs : ${ent.noms} noms distincts, ${ent.identifiees} offres reliées à une entreprise (${ent.appels} appels API)`);
   console.log(`Écoles / organismes de formation : ${qualite.ecoles} offres ; intérim / cabinets : ${qualite.interim}`);
   console.log(`Salaire : ${JSON.stringify(qualite.salaire)} ; positions : ${JSON.stringify(qualite.positions)}`);
   console.log(`\nContrôles :`);
   for (const k of controles) console.log(`  ${k.ok ? "OK   " : "ÉCHEC"} ${k.nom} — ${k.detail}`);
+  console.log(`
+À lire avec prudence (contrôles de sens) :`);
+  for (const k of vigilance) console.log(`  ${String(k.n).padStart(5)}  ${k.nom} — ${k.detail}`);
   console.log(`\nÉcrit : data/alternance.json (${Math.round(json.length / 1024)} Ko) et data/alternance.js — ${Math.round((Date.now() - t0) / 1000)} s`);
   if (controles.some(k => !k.ok)) process.exitCode = 2;
 }

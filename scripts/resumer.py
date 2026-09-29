@@ -1,5 +1,5 @@
 r"""Lit les offres actives du jour (data/actives/<date>.csv), retrouve leur dernière version dans
-data/brut, et écrit data/resume.json : le fichier que la page index.html affiche.
+data/brut, et écrit data/resume.json : le fichier que la page marche.html affiche.
 
 Usage :
     .venv\Scripts\python.exe scripts\resumer.py

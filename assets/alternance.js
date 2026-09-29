@@ -42,9 +42,13 @@ if (!D) {
   throw new Error("data/alternance.js absent");
 }
 const METIER = Object.fromEntries(D.metiers.map(m => [m.code, m]));
-const COUL_GROUPE = { Marketing: "#0a5cff", Digital: "#ff6a00", Frontière: "#8e8e93" };
+const COUL_GROUPE = { Marketing: "#0a5cff", Digital: "#ff6a00", "Communication et commerce": "#8e8e93" };
 const COUL_PUBLIE = { "Entreprise": "#0a5cff", "École / organisme de formation": "#ff6a00", "Intérim / cabinet de recrutement": "#8e8e93", "Non précisé": "#c7c7cc" };
 const COUL_TYPE = { apprentissage: "#0a5cff", professionnalisation: "#5f9bf5", "non précisé": "#c7c7cc" };
+// Salaire : le barème légal recopié est écarté ; stages et alternances ne se mélangent jamais dans une médiane.
+const salUtile = Site.salUtile;
+const baseSalaire = sel => sel.filter(o => (o.contrat || "alternance") === (E.c === "stage" ? "stage" : "alternance"));
+const libBaseSalaire = () => E.c === "tous" ? " (alternances seulement)" : "";
 const SOURCES = { FT: "France Travail", LBA: "La bonne alternance", ADZ: "Adzuna" };
 const TYPES = ["apprentissage", "professionnalisation", "non précisé"];
 const AURA = "Auvergne-Rhône-Alpes", IDF = "Île-de-France";
@@ -357,9 +361,10 @@ function rendreMetiers(zoneOk) {
 /* ---- Chiffres-clés ---- */
 function rendreChiffres(sel) {
   const N = sel.length;
-  const avecSal = sel.filter(o => o.smin != null);
+  const avecSal = baseSalaire(sel).filter(salUtile);
   const ecoles = sel.filter(o => o.ecole).length;
-  const appr = sel.filter(o => o.type === "apprentissage").length, pro = sel.filter(o => o.type === "professionnalisation").length;
+  const selAlt = sel.filter(o => (o.contrat || "alternance") === "alternance"), NA = selAlt.length;
+  const appr = selAlt.filter(o => o.type === "apprentissage").length, pro = selAlt.filter(o => o.type === "professionnalisation").length;
   const recentes = sel.filter(o => { const a = age(o); return a != null && a < 30; }).length;
   const employeurs = new Set(sel.map(o => norm(o.ent)).filter(Boolean)).size;
   const fusion = sel.reduce((a, o) => a + (o.annonces > 1 ? o.annonces - 1 : 0), 0);
@@ -386,11 +391,11 @@ function rendreChiffres(sel) {
     E.c === "stage"
       ? [dk.length ? pct(six.length, dk.length) + " %" : "—", `des stages de durée connue font 5 à 6 mois (${nb(dk.length)} durées connues sur ${nb(N)})`,
          () => Verif.ouvrir({ titre: "Stages de 5 à 6 mois", calcul: { num: six.length, den: dk.length, texte: "Stages de 5 à 6 mois ÷ stages dont la durée est connue" }, champ: "duree_classe", filtres: F, offres: six, base: dk, valeur: o => o.duree + " mois" })]
-      : [`${pct(appr, N)} % / ${pct(pro, N)} %`, "apprentissage / professionnalisation" + (E.c === "tous" ? ` (${pct(sel.filter(o => o.contrat === "stage").length, N)} % de stages)` : ""),
+      : [`${pct(appr, NA)} % / ${pct(pro, NA)} %`, `des ${nb(NA)} alternances : apprentissage / professionnalisation` + (E.c === "tous" ? ` (et ${nb(N - NA)} stages à part)` : ""),
          () => verifGraphique("g-type")],
-    [avecSal.length ? euro(mediane(avecSal.map(o => o.smin))) : "—", `brut mensuel médian affiché (${avecSal.length} offre${s(avecSal.length)} sur ${N})`,
-      () => Verif.ouvrir({ titre: "Salaire médian affiché", calcul: { num: avecSal.length ? euro(mediane(avecSal.map(o => o.smin))) : "—", den: null,
-        texte: `Médiane des minimums affichés par ${avecSal.length} offres : la moitié affiche moins, l'autre moitié plus (triez la colonne dans Excel pour la retrouver)` },
+    [avecSal.length ? euro(mediane(avecSal.map(o => o.smin))) : "—", `brut mensuel médian affiché${libBaseSalaire()} (${avecSal.length} offre${s(avecSal.length)} sur ${nb(baseSalaire(sel).length)})`,
+      () => Verif.ouvrir({ titre: "Salaire médian affiché" + libBaseSalaire(), calcul: { num: avecSal.length ? euro(mediane(avecSal.map(o => o.smin))) : "—", den: null,
+        texte: `Médiane des minimums affichés par ${avecSal.length} offres, barème légal recopié exclu : la moitié affiche moins, l'autre moitié plus (triez la colonne dans Excel pour la retrouver)` },
         champ: "salaire", filtres: F, offres: avecSal, base: sel, valeur: o => `${o.smin}${o.smax > o.smin ? "–" + o.smax : ""} € (libellé : ${o.sal_lib || "—"})` })],
     [nb(employeurs), "employeurs différents",
       compte("Employeurs différents", sel.filter(o => o.ent), `${nb(employeurs)} noms d'employeurs différents (sans tenir compte des majuscules ni des accents) parmi les offres qui en nomment un`, "publie_par", o => o.ent)],
@@ -398,7 +403,7 @@ function rendreChiffres(sel) {
       part("Offres de moins de 30 jours", recentesL, `Offres publiées moins de 30 jours avant la collecte du ${dateFr(D.date)} ÷ offres de la sélection`, "age", o => age(o) + " jours")],
   ];
   const el = document.getElementById("chiffres");
-  el.innerHTML = tuiles.map(([v, l], i) => `<div class="chiffre verifiable" data-k="${i}" title="Cliquer pour vérifier ce chiffre"><b>${v}</b><span>${esc(l)}</span></div>`).join("");
+  el.innerHTML = tuiles.map(([v, l], i) => `<button type="button" class="chiffre verifiable" data-k="${i}" title="Cliquer pour vérifier ce chiffre" aria-label="${esc(v + " " + l)} — vérifier ce chiffre"><b>${v}</b><span>${esc(l)}</span></button>`).join("");
   el.querySelectorAll(".chiffre").forEach(t => t.addEventListener("click", () => tuiles[+t.dataset.k][2]()));
 }
 
@@ -487,14 +492,16 @@ function rendreContrat(sel) {
   const texte = sel.filter(o => o.dipl_src === "texte").length;
   lecture("l-diplome", connus ? `${connus > 1 ? `parmi les ${nb(connus)} offres qui citent un diplôme, ${pct(vd[iMax], connus)} % visent` : "la seule offre qui cite un diplôme vise"} un <b>${dipl[iMax]}</b> (${pluriel(vd[iMax], "offre")}). ${pct(vd.at(-1), N)} % des annonces n'en citent aucun. Le niveau est le plus souvent lu dans le texte (${pluriel(texte, "offre")}) : c'est le plus haut diplôme mentionné.` : N ? "aucune annonce de la sélection ne cite de diplôme." : "");
 
-  const avec = sel.filter(o => o.smin != null);
+  const avec = baseSalaire(sel).filter(salUtile);
+  const nBareme = baseSalaire(sel).filter(o => o.sal_bareme).length;
   const tr = [["< 600 €", 0, 600], ["600–899 €", 600, 900], ["900–1 199 €", 900, 1200], ["1 200–1 499 €", 1200, 1500], ["1 500–1 799 €", 1500, 1800], ["1 800 € et plus", 1800, 1e9]];
   barres("g-salaire", tr.map(x => x[0]), tr.map(([, a, b]) => avec.filter(o => o.smin >= a && o.smin < b).length), { horizontal: false, total: avec.length });
   verifier("g-salaire", { titre: "Rémunération affichée (minimum, brut mensuel)", base: avec, cles: tr.map(x => x[0]), champ: "salaire",
     cle: o => (tr.find(([, a, b]) => o.smin >= a && o.smin < b) || [])[0], total: avec.length, totalLibelle: "offres qui affichent une rémunération",
     valeur: o => `${o.smin}${o.smax > o.smin ? "–" + o.smax : ""} €${o.sal_etat === "corrigé" ? " (corrigé)" : ""} — libellé : ${o.sal_lib || "—"}` });
   const corr = avec.filter(o => o.sal_etat === "corrigé").length;
-  lecture("l-salaire", avec.length ? `${nb(avec.length)} offres sur ${nb(N)} (${pct(avec.length, N)} %) affichent une rémunération. Le minimum médian est de <b>${euro(mediane(avec.map(o => o.smin)))} brut par mois</b>, le maximum médian de ${euro(mediane(avec.map(o => o.smax)))}.`
+  const NS = baseSalaire(sel).length;
+  lecture("l-salaire", avec.length ? `${E.c === "tous" ? "alternances seulement (une gratification de stage ne se compare pas à un salaire d'apprenti) : " : ""}${nb(avec.length)} offres sur ${nb(NS)} (${pct(avec.length, NS)} %) affichent une rémunération exploitable${nBareme ? ` (${nb(nBareme)} autres recopient seulement le barème légal et sont écartées)` : ""}. Le minimum médian est de <b>${euro(mediane(avec.map(o => o.smin)))} brut par mois</b>, le maximum médian de ${euro(mediane(avec.map(o => o.smax)))}.`
     + (corr ? ` ${nb(corr)} montants saisis par erreur en « annuel » ont été lus comme mensuels.` : "") + (E.c === "stage" ? " Un stage de plus de 2 mois doit obligatoirement être gratifié (montant minimum fixé par la loi)." : " Pour un apprenti, le minimum légal dépend de l'âge et de l'année de contrat.") : "aucune offre de la sélection n'affiche de rémunération.");
 
   const ta = [["< 7 jours", 0, 7], ["7–29 j", 7, 30], ["30–59 j", 30, 60], ["60–89 j", 60, 90], ["90 j et plus", 90, 1e9]];
@@ -542,12 +549,15 @@ function rendreRecruteurs(sel) {
 /* ---- Outils ---- */
 function rendreOutils(sel) {
   const N = sel.length;
-  const par = D.outils.map(nom => [nom, sel.filter(o => (o.outils || []).includes(nom)).length]).sort((a, b) => b[1] - a[1]);
-  barres("g-outils", par.map(x => x[0]), par.map(x => pct(x[1], N)), { pourcent: true });
-  verifier("g-outils", { titre: "Outils et compétences cités", base: sel, cle: o => o.outils || [], cles: par.map(x => x[0]), champ: "outils",
-    note: "Une offre qui cite plusieurs outils est comptée dans chaque ligne : le total des parts dépasse donc 100 %.", valeur: o => (o.outils || []).join(", ") || "aucun" });
-  const aucun = sel.filter(o => !(o.outils || []).length).length;
-  lecture("l-outils", N ? `<b>${esc(par[0][0])}</b> est cité dans ${pct(par[0][1], N)} % des offres (${nb(par[0][1])}), ${esc(par[1][0])} dans ${pct(par[1][1], N)} %, ${esc(par[2][0])} dans ${pct(par[2][1], N)} %. ${pct(aucun, N)} % des annonces ne citent aucun outil de la grille (config/alternance.json).` : "");
+  // Texte complet seulement (France Travail, La bonne alternance) : Adzuna ne donne qu'un extrait, qui ferait baisser les parts.
+  const complet = sel.filter(o => o.src !== "ADZ"), NC = complet.length;
+  const par = D.outils.map(nom => [nom, complet.filter(o => (o.outils || []).includes(nom)).length]).sort((a, b) => b[1] - a[1]);
+  barres("g-outils", par.map(x => x[0]), par.map(x => pct(x[1], NC)), { pourcent: true });
+  verifier("g-outils", { titre: "Outils et compétences cités", base: complet, cle: o => o.outils || [], cles: par.map(x => x[0]), champ: "outils", total: NC, totalLibelle: "offres dont le texte complet est connu",
+    note: "Une offre qui cite plusieurs outils est comptée dans chaque ligne : le total des parts dépasse donc 100 %. Offres Adzuna exclues (extrait seulement).", valeur: o => (o.outils || []).join(", ") || "aucun" });
+  const aucun = complet.filter(o => !(o.outils || []).length).length;
+  lecture("l-outils", NC ? `sur les ${nb(NC)} offres dont on a le texte complet${N > NC ? ` (${nb(N - NC)} offres Adzuna mises de côté : extrait seulement)` : ""}, <b>${esc(par[0][0])}</b> est cité dans ${pct(par[0][1], NC)} % des offres (${nb(par[0][1])}), ${esc(par[1][0])} dans ${pct(par[1][1], NC)} %, ${esc(par[2][0])} dans ${pct(par[2][1], NC)} %. ${pct(aucun, NC)} % des annonces ne citent aucun outil de la grille (config/alternance.json).`
+    : N ? "ces offres viennent toutes d'Adzuna, qui ne donne qu'un extrait du texte : pas de pourcentage fiable." : "");
 }
 
 /* ---- Liste des offres ---- */
@@ -688,6 +698,7 @@ function rendreQualite() {
     ["Offres lues, toutes sources", q.brutes],
     ["Doublons exacts retirés (même identifiant, vu dans deux sources)", q.doublons_meme_id],
     ["Annonces republiées fusionnées (même intitulé, même employeur, même ville)", q.doublons_proches],
+    ["Copies relayées par un site d'emploi fusionnées (même intitulé sans la ville, employeur effacé ; l'employeur de l'original est repris)", q.doublons_relais || 0],
     ["Offres retenues", q.retenues],
     ["Employeurs reliés au répertoire SIRENE (API Recherche d'entreprises)", `${nb(q.entreprises.offres_identifiees)} offres (${pct(q.entreprises.offres_identifiees, q.retenues)} %), ${nb(q.entreprises.noms_distincts)} noms cherchés`],
     ["Correspondances rejetées : homonyme dont l'activité ne colle pas avec celle donnée par l'offre", q.entreprises.homonymes_rejetes || 0],
@@ -698,7 +709,16 @@ function rendreQualite() {
     ["Diplôme : donné par un champ / lu dans le texte / inconnu", `${nb(dip.champ || 0)} / ${nb(dip.texte || 0)} / ${nb(dip.inconnu || 0)}`],
     ["Position : exacte / centre de la commune / centre du département / aucune", `${nb(pos.offre || 0)} / ${nb(pos.commune || 0)} / ${nb(pos.departement || 0)} / ${nb(pos.aucune || 0)}`],
     ["Offres de plus de 90 jours", q.anciennes_90j],
+    ["Salaire : barème légal recopié au lieu d'un montant (écarté des médianes)", q.bareme_recopie || 0],
   ];
+  // Contrôles de sens : ce qui est douteux dans le contenu des offres, recompté à chaque collecte.
+  const vig = q.vigilance || [], parId = new Map(D.offres.map(o => [o.id, o]));
+  document.getElementById("q-vigilance").innerHTML = vig.length ? `<table class="q">` + vig.map((v, i) => `<tr><td class="n">${nb(v.n)}</td><td>${v.n ? `<button class="lien-verif" data-v="${i}">${esc(v.nom)}</button>` : `<b>${esc(v.nom)}</b>`}<br><span class="note">${esc(v.detail)}</span></td></tr>`).join("") + `</table>` : "<p class=\"note\">Relancez la collecte pour obtenir ces contrôles.</p>";
+  document.querySelectorAll("#q-vigilance button[data-v]").forEach(b => b.addEventListener("click", () => {
+    const v = vig[+b.dataset.v], off = v.ids.map(id => parId.get(id)).filter(Boolean);
+    Verif.ouvrir({ titre: v.nom, calcul: { num: v.n, den: q.retenues, texte: "Offres concernées ÷ offres retenues (toutes, écoles comprises)" }, filtres: "toutes les offres retenues, sans filtre", offres: off, base: D.offres,
+      valeur: o => o.smin != null ? `${o.smin}–${o.smax} € (${o.sal_lib || ""})` : `${o.ville || ""} (${o.dep || "?"})`, note: v.detail });
+  }));
   document.getElementById("q-nettoyage").innerHTML = `<table class="q">` + lignes.map(([a, b]) => `<tr><td>${esc(a)}</td><td class="n">${typeof b === "number" ? nb(b) : esc(b)}</td></tr>`).join("") + `</table>`;
 }
 

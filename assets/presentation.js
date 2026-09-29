@@ -10,13 +10,14 @@
 "use strict";
 const D = window.ALTERNANCE;
 if (!D) { document.querySelector(".page").innerHTML = "<p>Données absentes : lancez <code>mettre-a-jour-alternance.cmd</code>.</p>"; throw new Error("données absentes"); }
-const { esc, nb, pct, dateFr, libDep, villeSimple } = Site;
+const { esc, nb, pct, dateFr, libDep, villeSimple, salUtile, quartiles } = Site;
 
 const METIER = Object.fromEntries(D.metiers.map(m => [m.code, m]));
 const REG = D.region_suivie || { nom: "Auvergne-Rhône-Alpes", deps: [] };
 const DUREES = D.classes_duree || [];
 const PETIT = 20;
-const BLEU = "#1f5eff", PALE = "#b9ccff", GRIS = "#cfd3dc", ORANGE = "#ff6a00";
+// PALE : assez foncé pour se voir sur fond blanc (contraste 3:1), assez clair pour laisser ressortir BLEU.
+const BLEU = "#1f5eff", PALE = "#6f8ff0", GRIS = "#aab1bf", ORANGE = "#ff6a00";
 const s = n => n > 1 ? "s" : "";
 const euro = n => n == null ? "—" : Math.round(n).toLocaleString("fr-FR") + " €";
 const mediane = a => { const t = a.filter(x => x != null).sort((x, y) => x - y); if (!t.length) return null; const m = (t.length - 1) / 2; return (t[Math.floor(m)] + t[Math.ceil(m)]) / 2; };
@@ -37,7 +38,7 @@ let metier = D.metier_par_defaut || "M1620", ecoles = false, contrat = "alternan
 const passeMetier = o => metier === "*" ? true : metier.startsWith("g:") ? (METIER[o.rome] || {}).groupe === metier.slice(2) : o.rome === metier;
 const passeContrat = o => contrat === "tous" || (o.contrat || "alternance") === contrat;
 const garde = o => (ecoles || !o.ecole) && passeContrat(o);
-const libMetier = () => metier === "*" ? "tous les métiers du marketing suivis" : metier.startsWith("g:") ? `les métiers du groupe « ${metier.slice(2)} »` : METIER[metier].libelle;
+const libMetier = () => metier === "*" ? "tous les métiers suivis (marketing, digital, communication et commerce)" : metier.startsWith("g:") ? `les métiers du groupe « ${metier.slice(2)} »` : METIER[metier].libelle;
 const EN = () => ({ alternance: "en alternance", stage: "de stage", tous: "d'alternance ou de stage" })[contrat];
 const TITRE = () => ({ alternance: "L'alternance", stage: "Les stages", tous: "L'alternance et les stages" })[contrat];
 const decrireFiltres = () => `offres : ${({ alternance: "alternance", stage: "stages", tous: "alternance et stages" })[contrat]} · métier : ${libMetier()} · zone : France entière · `
@@ -51,7 +52,9 @@ const libDe = (v, i) => v.libelles ? v.libelles[i] : v.cles[i];
 function verifCategorie(id, i) {
   const v = VERIF[id]; if (!v || v.cles[i] == null) return;
   const off = offresDe(v, i);
-  Verif.ouvrir({ titre: `${v.titre} — ${libDe(v, i)}`, calcul: { num: off.length, den: v.total != null ? v.total : v.base.length, texte: `Offres « ${libDe(v, i)} » ÷ ${v.totalLibelle || "offres de la sélection"}` },
+  // v.dens : un dénominateur propre à chaque barre (ex. part de l'alternance dans chaque métier).
+  const den = v.dens ? v.dens[i] : v.total != null ? v.total : v.base.length;
+  Verif.ouvrir({ titre: `${v.titre} — ${libDe(v, i)}`, calcul: { num: off.length, den, texte: v.dens ? v.texteDen : `Offres « ${libDe(v, i)} » ÷ ${v.totalLibelle || "offres de la sélection"}` },
     champ: v.champ, filtres: v.filtres || decrireFiltres(), offres: off, base: v.base, valeur: v.valeur, note: v.note });
 }
 function verifGraphique(id) {
@@ -70,8 +73,19 @@ function graph(id, type, data, options) {
   const opts = Object.assign({ responsive: true, maintainAspectRatio: false, animation: false,
     onClick: (ev, els) => { if (els.length) verifCategorie(id, els[0].index); },
     onHover: (ev, els) => { ev.native.target.style.cursor = els.length ? "pointer" : "default"; } }, options);
-  if (G[id]) { G[id].data = data; G[id].options = opts; G[id].update(); return; }
-  G[id] = new Chart(document.getElementById(id), { type, data, options: opts });
+  if (G[id]) { G[id].data = data; G[id].options = opts; G[id].update(); }
+  else G[id] = new Chart(document.getElementById(id), { type, data, options: opts });
+  decrire(id, data);
+}
+// Pour les lecteurs d'écran : le canvas est décrit, et un tableau invisible donne les valeurs.
+function decrire(id, data) {
+  const c = document.getElementById(id), titre = (c.closest(".carte") || c).querySelector("h3");
+  const lignes = data.labels.map((l, i) => [String(l), data.datasets[0].data[i]]);
+  c.setAttribute("role", "img");
+  c.setAttribute("aria-label", `${titre ? titre.textContent : "Graphique"} : ${lignes.slice(0, 5).map(([l, v]) => `${l}, ${v}`).join(" ; ")}${lignes.length > 5 ? " ; …" : ""}`);
+  let t = c.parentElement.querySelector("table.sr-only");
+  if (!t) { t = document.createElement("table"); t.className = "sr-only"; c.parentElement.appendChild(t); }
+  t.innerHTML = `<caption>${esc(titre ? titre.textContent : "")}</caption>` + lignes.map(([l, v]) => `<tr><th scope="row">${esc(l)}</th><td>${esc(v)}</td></tr>`).join("");
 }
 function barres(id, etiquettes, valeurs, { horizontal = true, couleurs = BLEU, total = null, pourcent = false } = {}) {
   graph(id, "bar", { labels: etiquettes, datasets: [{ data: valeurs, backgroundColor: couleurs, borderRadius: 6, maxBarThickness: 34 }] }, {
@@ -117,9 +131,14 @@ function rendre() {
 
   /* ---- Chiffres-clés (cliquables) ---- */
   const lieu = o => `${o.ville || o.lieu || "—"} (${o.dep || "?"})`;
-  const avecSal = sel.filter(o => o.smin != null);
+  // Salaire : jamais une médiane qui mélange stages et alternances (en « Les deux », c'est celle de l'alternance, dite comme telle).
+  const selAlt = sel.filter(o => o.contrat === "alternance"), selStage = sel.filter(o => o.contrat === "stage");
+  const baseSal = contrat === "stage" ? selStage : selAlt;
+  const avecSal = baseSal.filter(salUtile);
+  const qs = quartiles(avecSal.map(o => o.smin));
+  const libSal = contrat === "tous" ? "alternances seulement" : null;
   const dk = sel.filter(o => o.duree != null), six = dk.filter(o => o.duree >= 5 && o.duree <= 6);
-  const appr = sel.filter(o => o.type === "apprentissage");
+  const appr = selAlt.filter(o => o.type === "apprentissage");
   const employeurs = new Set(sel.map(o => (o.ent || "").toLowerCase()).filter(Boolean)).size;
   const compte = (titre, offres, texte, champ, valeur) => () => Verif.ouvrir({ titre, calcul: { num: offres.length, den: null, texte }, champ, filtres: F, offres, base: sel, valeur });
   const tuiles = [
@@ -129,14 +148,14 @@ function rendre() {
     contrat === "stage"
       ? [dk.length ? pct(six.length, dk.length) + " %" : "—", `des stages de durée connue font 5 à 6 mois (${nb(dk.length)} connues)`,
          () => Verif.ouvrir({ titre: "Stages de 5 à 6 mois", calcul: { num: six.length, den: dk.length, texte: "Stages de 5 à 6 mois ÷ stages dont la durée est connue" }, champ: "duree_classe", filtres: F, offres: six, base: dk, valeur: o => o.duree + " mois" })]
-      : [pct(appr.length, N) + " %", "en apprentissage", () => Verif.ouvrir({ titre: "Offres en apprentissage", calcul: { num: appr.length, den: N, texte: "Offres en apprentissage ÷ offres de la sélection" }, champ: "type", filtres: F, offres: appr, base: sel, valeur: o => o.type })],
-    [avecSal.length ? euro(mediane(avecSal.map(o => o.smin))) : "—", `brut mensuel médian (${nb(avecSal.length)} offres l'affichent)`,
-      () => Verif.ouvrir({ titre: "Rémunération médiane affichée", calcul: { num: avecSal.length ? euro(mediane(avecSal.map(o => o.smin))) : "—", den: null, texte: `Médiane des minimums affichés par ${avecSal.length} offres (la moitié affiche moins, l'autre moitié plus)` },
-        champ: "salaire", filtres: F, offres: avecSal, base: sel, valeur: o => `${o.smin}${o.smax > o.smin ? "–" + o.smax : ""} € — ${o.sal_lib || ""}` })],
+      : [pct(appr.length, selAlt.length) + " %", `des ${nb(selAlt.length)} alternances sont en apprentissage`, () => Verif.ouvrir({ titre: "Alternances en apprentissage", calcul: { num: appr.length, den: selAlt.length, texte: "Offres en apprentissage ÷ offres en alternance (les stages ne comptent pas)" }, champ: "type", filtres: F, offres: appr, base: selAlt, valeur: o => o.type })],
+    [qs ? euro(qs.med) : "—", `brut mensuel médian${libSal ? " (" + libSal + ")" : ""} — ${nb(avecSal.length)} offre${s(avecSal.length)} l'affiche${avecSal.length > 1 ? "nt" : ""}`,
+      () => Verif.ouvrir({ titre: "Rémunération médiane affichée" + (libSal ? " — " + libSal : ""), calcul: { num: qs ? euro(qs.med) : "—", den: null, texte: `Médiane des minimums affichés par ${avecSal.length} offres (la moitié affiche moins, l'autre moitié plus), barème légal recopié exclu` },
+        champ: "salaire", filtres: F, offres: avecSal, base: baseSal, valeur: o => `${o.smin}${o.smax > o.smin ? "–" + o.smax : ""} € — ${o.sal_lib || ""}` })],
     [nb(employeurs), "employeurs différents", compte("Employeurs différents", sel.filter(o => o.ent), `${nb(employeurs)} noms d'employeurs différents parmi les offres qui en nomment un`, "publie_par", o => o.ent)],
   ];
   const el = document.getElementById("n-nombres");
-  el.innerHTML = tuiles.map(([v, l, , fort], i) => `<div class="chiffre verifiable${fort ? " fort" : ""}" data-k="${i}" title="Cliquer pour vérifier ce chiffre"><b>${v}</b><span>${esc(l)}</span></div>`).join("");
+  el.innerHTML = tuiles.map(([v, l, , fort], i) => `<button type="button" class="chiffre verifiable${fort ? " fort" : ""}" data-k="${i}" title="Cliquer pour vérifier ce chiffre" aria-label="${esc(v + " " + l)} — vérifier ce chiffre"><b>${v}</b><span>${esc(l)}</span></button>`).join("");
   el.querySelectorAll(".chiffre").forEach(t => t.addEventListener("click", () => tuiles[+t.dataset.k][2]()));
 
   /* 1. Combien */
@@ -154,6 +173,27 @@ function rendre() {
     ? `<b>${nb(N)} offres</b> ${EN()} pour ce métier en France : il se classe <b>${rang}<sup>e</sup> sur ${parMetier.length}</b> métiers suivis (${pct(N, totalTous)} % des offres). ${p63.length ? `Seulement ${nb(p63.length)} dans le Puy-de-Dôme.` : "Aucune dans le Puy-de-Dôme."}${fragile(N)}`
     : `<b>${nb(N)} offres</b> ${EN()} en France pour ${esc(libMetier())}, dont ${nb(reg.length)} en ${esc(REG.nom)} (${pct(reg.length, N)} %).`) + ` <button class="lien-verif">Vérifier</button>`);
   ecrire("s-combien", lSource + (nEcoles && !ecoles ? ` ${nb(nEcoles)} offres d'écoles retirées (${pct(nEcoles, toutes.length)} % des annonces de ce choix).` : ""));
+  // Ce que recouvre le code métier : les intitulés réels les plus fréquents (un libellé officiel peut tromper).
+  const tf = metier.length === 5 && METIER[metier] ? METIER[metier].titres_frequents || [] : [];
+  ecrire("i-combien", tf.length ? `<p class="note" style="margin:10px 0 0">Derrière ce code, les annonces s'intitulent le plus souvent :</p><ul class="titres">${tf.map(t => `<li>${esc(t.t)} <small>(${nb(t.n)})</small></li>`).join("")}</ul>` : "");
+
+  /* 1 bis. Où l'alternance est la porte d'entrée : part de l'alternance dans TOUTES les offres France Travail du métier */
+  const parts = D.metiers.filter(m => m.total_ft >= PETIT).map(m => ({ m, p: m.alt_ft / m.total_ft })).sort((a, b) => b.p - a.p);
+  const moyenneFt = D.metiers.reduce((a, m) => a + m.alt_ft, 0) / Math.max(1, D.metiers.reduce((a, m) => a + m.total_ft, 0));
+  barres("g-part", parts.map(x => x.m.libelle), parts.map(x => Math.round(100 * x.p)), { pourcent: true, couleurs: parts.map(x => choisi(x) ? BLEU : PALE) });
+  verifier("g-part", { titre: "Part de l'alternance parmi les offres France Travail", base: D.offres.filter(o => o.src === "FT"), cle: o => o.rome, cles: parts.map(x => x.m.code), libelles: parts.map(x => `${x.m.libelle} : ${x.m.alt_ft} alternances sur ${x.m.total_ft} offres`), champ: "contrat",
+    dens: parts.map(x => x.m.total_ft), texteDen: "Alternances France Travail du métier ÷ toutes les offres France Travail du métier ce jour-là (tous contrats)",
+    filtres: `France Travail seulement, toutes offres du jour (CDI, CDD, alternance…) · écoles comprises · métiers d'au moins ${PETIT} offres`,
+    note: "Le dénominateur (toutes les offres du métier, tous contrats) vient de data/actives du dépôt du cours ; la liste montre les alternances comptées au numérateur." });
+  const haut = parts.filter(x => x.p >= 2 * moyenneFt), bas = parts.filter(x => x.p <= moyenneFt / 3);
+  const cite = l => l.slice(0, 3).map(x => `<b>${esc(x.m.libelle)}</b> (${pct(x.m.alt_ft, x.m.total_ft)} %)`).join(", ");
+  const ici = parts.find(choisi);
+  ecrire("r-part", parts.length ? `Sur l'ensemble des métiers suivis, <b>${Math.round(100 * moyenneFt)} %</b> des offres France Travail sont des alternances.`
+    + (haut.length ? ` L'alternance est une vraie porte d'entrée pour ${cite(haut)}.` : "")
+    + (bas.length ? ` Elle est presque absente pour ${cite(bas.slice().reverse())} : là, on entre plutôt par un stage ou un premier emploi.` : "")
+    + (ici && metier.length === 5 ? ` Pour votre choix : <b>${pct(ici.m.alt_ft, ici.m.total_ft)} %</b> (${nb(ici.m.alt_ft)} sur ${nb(ici.m.total_ft)}).` : "")
+    + ` <button class="lien-verif">Vérifier</button>` : "Pas assez d'offres France Travail pour comparer.");
+  ecrire("s-part", `Source : France Travail, toutes les offres en ligne le ${dateFr(D.date_ft || D.date)} (dépôt du cours), écoles comprises. Seule source qui donne aussi les offres hors alternance : c'est elle qui permet ce rapport.`);
 
   /* 2. France */
   const regions = compter(sel, o => o.reg || null);
@@ -221,32 +261,72 @@ function rendre() {
   ecrire("s-qui", lSource + " Taille et secteur : répertoire SIRENE (API Recherche d'entreprises), employeur retrouvé par son nom et son département.");
 
   /* 6. Outils */
-  const outils = D.outils.map(n => [n, sel.filter(o => (o.outils || []).includes(n)).length]).sort((a, b) => b[1] - a[1]).slice(0, 12);
-  barres("g-outils", outils.map(x => x[0]), outils.map(x => pct(x[1], N)), { pourcent: true });
-  verifier("g-outils", { titre: "Outils et compétences cités", base: sel, cle: o => o.outils || [], cles: outils.map(x => x[0]), champ: "outils",
-    note: "Une offre qui cite plusieurs outils est comptée dans chaque ligne.", valeur: o => (o.outils || []).join(", ") || "aucun" });
-  ecrire("r-outils", (N && outils[0][1] ? `<b>${esc(outils[0][0])}</b> revient dans <b>${pct(outils[0][1], N)} %</b> des offres, devant ${esc(outils[1][0])} (${pct(outils[1][1], N)} %) et ${esc(outils[2][0])} (${pct(outils[2][1], N)} %).${fragile(N)}` : "Pas d'outil cité.") + ` <button class="lien-verif">Vérifier</button>`);
-  ecrire("s-outils", lSource + " Mots cherchés dans le titre et le texte de l'annonce (grille modifiable dans config/alternance.json).");
+  // Seules les sources qui donnent le texte complet de l'annonce : Adzuna n'en donne qu'un extrait, ses offres feraient baisser les pourcentages.
+  const complet = sel.filter(o => o.src !== "ADZ"), NC = complet.length;
+  const outils = D.outils.map(n => [n, complet.filter(o => (o.outils || []).includes(n)).length]).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  barres("g-outils", outils.map(x => x[0]), outils.map(x => pct(x[1], NC)), { pourcent: true });
+  verifier("g-outils", { titre: "Outils et compétences cités", base: complet, cle: o => o.outils || [], cles: outils.map(x => x[0]), champ: "outils", total: NC, totalLibelle: "offres dont le texte complet est connu",
+    note: "Une offre qui cite plusieurs outils est comptée dans chaque ligne. Offres Adzuna exclues : l'API n'en donne qu'un extrait.", valeur: o => (o.outils || []).join(", ") || "aucun" });
+  ecrire("r-outils", (NC && outils[0][1] ? `<b>${esc(outils[0][0])}</b> revient dans <b>${pct(outils[0][1], NC)} %</b> des offres, devant ${esc(outils[1][0])} (${pct(outils[1][1], NC)} %) et ${esc(outils[2][0])} (${pct(outils[2][1], NC)} %).${fragile(NC)}`
+    : NC ? "Pas d'outil cité." : "Aucune offre de ce choix n'a son texte complet (elles viennent toutes d'Adzuna) : pas de pourcentage fiable.") + ` <button class="lien-verif">Vérifier</button>`);
+  ecrire("s-outils", `Calculé sur les ${nb(NC)} offres de France Travail et de La bonne alternance, qui donnent le texte complet${N > NC ? ` (${nb(N - NC)} offres Adzuna mises de côté : l'API n'en donne qu'un extrait)` : ""}. Mots cherchés dans le titre et le texte (grille modifiable dans config/alternance.json).`);
 
   /* 7. Salaire */
   const tr = [["< 600 €", 0, 600], ["600–899", 600, 900], ["900–1 199", 900, 1200], ["1 200–1 499", 1200, 1500], ["1 500–1 799", 1500, 1800], ["1 800 € et +", 1800, 1e9]];
-  ecrire("t-salaire", `Minimum affiché, brut par mois <small>(${nb(avecSal.length)} offres)</small>`);
+  ecrire("t-salaire", `Minimum affiché, brut par mois <small>(${nb(avecSal.length)} offres${libSal ? ", " + libSal : ""})</small>`);
   barres("g-salaire", tr.map(x => x[0]), tr.map(([, a, b]) => avecSal.filter(o => o.smin >= a && o.smin < b).length), { horizontal: false, total: avecSal.length });
   verifier("g-salaire", { titre: "Rémunération affichée (minimum)", base: avecSal, cle: o => (tr.find(([, a, b]) => o.smin >= a && o.smin < b) || [])[0], cles: tr.map(x => x[0]), champ: "salaire",
     totalLibelle: "offres qui affichent une rémunération", valeur: o => `${o.smin}${o.smax > o.smin ? "–" + o.smax : ""} € — ${o.sal_lib || ""}` });
-  ecrire("r-salaire", (avecSal.length ? `Seules <b>${pct(avecSal.length, N)} %</b> des offres affichent une rémunération. Pour elles, le minimum médian est de <b>${euro(mediane(avecSal.map(o => o.smin)))} brut par mois</b>.${fragile(avecSal.length)}` : "Aucune offre de ce choix n'affiche de rémunération.") + ` <button class="lien-verif">Vérifier</button>`);
-  ecrire("s-salaire", lSource + (contrat === "stage" ? " Un stage de plus de 2 mois doit être gratifié (minimum fixé par la loi)." : " Pour un apprenti, le minimum légal dépend de l'âge et de l'année de contrat.") + " Montants mensuels saisis par erreur dans la case « annuel » : corrigés.");
+  // La trace de l'analyse (TD 1 : « une analyse de salaire porte sur 893 offres, pas sur 3 280 ») : d'où part-on, que retire-t-on.
+  const affiche = baseSal.filter(o => o.smin != null), bareme = affiche.filter(o => o.sal_bareme);
+  const L = D.remuneration_legale || {}, smic = L.smic_mensuel || 0;
+  const plancher = contrat === "stage" ? (L.gratification_horaire || 0) * (L.heures_mois || 0) : smic * 0.53;
+  const auDessus = avecSal.filter(o => o.smin > plancher * 1.05);
+  ecrire("r-salaire", (avecSal.length
+      ? `${libSal ? "Pour les <b>alternances</b> (choisissez « Stage » pour les gratifications) : " : ""}sur ${nb(baseSal.length)} offres, ${nb(affiche.length)} affichent un montant${bareme.length ? `, dont ${nb(bareme.length)} qui recopient seulement le barème légal (écartées)` : ""} : l'analyse porte sur <b>${nb(avecSal.length)} offres</b> (${pct(avecSal.length, baseSal.length)} %). `
+        + `La moitié propose moins de <b>${euro(qs.med)} brut par mois</b>${qs.n >= 8 ? `, et la moitié centrale se situe entre ${euro(qs.q1)} et ${euro(qs.q3)}` : ""}. `
+        + (contrat === "stage" ? `${nb(auDessus.length)} offres (${pct(auDessus.length, avecSal.length)} %) paient nettement plus que la gratification minimale.`
+                               : `${nb(auDessus.length)} offres (${pct(auDessus.length, avecSal.length)} %) paient plus que le minimum d'un apprenti de 21 ans en 1<sup>re</sup> année (${euro(plancher)}).`)
+        + fragile(avecSal.length)
+      : "Aucune offre de ce choix n'affiche de rémunération exploitable.") + ` <button class="lien-verif">Vérifier</button>`);
+  ecrire("l-salaire", Site.minimaLegaux(contrat === "stage" ? "stage" : "alternance"));
+  ecrire("s-salaire", lSource + " Montants mensuels saisis par erreur dans la case « annuel » : corrigés. Le « minimum affiché » est le bas de la fourchette de l'annonce : c'est ce que l'employeur s'engage à payer."
+    + (libSal ? " En « Les deux », les stages sont exclus du salaire : une gratification et un salaire d'apprenti ne se comparent pas." : ""));
+
+  /* Avertissement stages : une seule source, recherches coupées, durée rarement connue (tout est relu dans les données). */
+  const adzStage = (D.qualite.sources.find(x => x.source === "ADZ") || {}).statut || "";
+  const coupees = (/stage :[^;]*recherches coupées : ([^;]*)/.exec(adzStage) || [])[1];
+  const nStages = sel.filter(o => o.contrat === "stage"), sourcesStage = new Set(nStages.map(o => o.src));
+  ecrire("a-stage", contrat === "alternance" || !nStages.length ? "" : `<div class="alerte"><b>Les stages se lisent avec plus de prudence que l'alternance.</b> `
+    + `${sourcesStage.size === 1 ? `Ils viennent tous d'une seule source (${esc(Site.SOURCES[[...sourcesStage][0]] || [...sourcesStage][0])}), ` : ""}le métier est déduit du titre de l'annonce, `
+    + `et la durée n'est connue que pour ${pct(nStages.filter(o => o.duree != null).length, nStages.length)} % d'entre eux (l'API ne donne qu'un extrait du texte).`
+    + (coupees ? ` Certaines recherches ont atteint la limite de l'API (${esc(coupees)}) : ces métiers sont sous-comptés.` : "") + `</div>`);
 
   /* 8. Méthode */
   const q = D.qualite;
   ecrire("m-sources", q.sources.filter(x => noms[x.source]).map(x => `<li><b>${esc(noms[x.source])}</b> : ${x.n ? nb(x.n) + " offres lues" : "non interrogé (pas de clé)"}</li>`).join("")
     + `<li><b>API Recherche d'entreprises</b> (État) : taille et secteur de ${nb(q.entreprises.offres_identifiees)} offres</li>`);
   ecrire("m-verifs", [
-    `${nb(q.brutes)} offres lues → <b>${nb(q.retenues)}</b> après suppression des doublons (${nb(q.doublons_meme_id + q.doublons_proches)} retirés)`,
+    `${nb(q.brutes)} offres lues → <b>${nb(q.retenues)}</b> après suppression des doublons (${nb(q.doublons_meme_id + q.doublons_proches + (q.doublons_relais || 0))} retirés, dont ${nb(q.doublons_relais || 0)} copies d'annonces relayées par un site d'emploi)`,
     `${nb(q.ecoles)} offres publiées par des écoles repérées (activité « enseignement » ou nom)`,
     `${nb((q.salaire || {})["corrigé"] || 0)} salaires mal saisis corrigés`,
-    `<b>${q.controles.filter(c => c.ok).length} contrôles automatiques sur ${q.controles.length} réussis</b> (dates, lieux, liens, recoupement avec la base du cours)`,
+    `${q.controles.filter(c => c.ok).length} contrôles de forme sur ${q.controles.length} réussis (identifiants, dates, lieux, liens, recoupement avec la base du cours) : ils disent que les fichiers sont bien formés, pas que chaque offre est juste — d'où la liste ci-contre`,
   ].map(t => `<li>${t}</li>`).join(""));
+  // À lire avec prudence : les contrôles de sens, calculés chaque matin ; un clic montre les offres concernées.
+  const vig = (q.vigilance || []).filter(v => v.n);
+  const parId = new Map(D.offres.map(o => [o.id, o]));
+  ecrire("m-vigilance", vig.length ? vig.map((v, i) => `<li data-v="${i}"><b>${nb(v.n)}</b> ${esc(v.nom.charAt(0).toLowerCase() + v.nom.slice(1))} <span class="note">— ${esc(v.detail)}</span></li>`).join("") : "<li>Aucune anomalie repérée ce matin.</li>");
+  document.querySelectorAll("#m-vigilance li[data-v]").forEach(li => Site.commeBouton(li, () => {
+    const v = vig[+li.dataset.v], off = v.ids.map(id => parId.get(id)).filter(Boolean);
+    Verif.ouvrir({ titre: v.nom, calcul: { num: v.n, den: q.retenues, texte: `Offres concernées ÷ offres retenues (toutes, écoles comprises)${v.n > off.length ? ` — ${off.length} montrées` : ""}` },
+      filtres: "toutes les offres retenues ce matin, sans filtre", offres: off, base: D.offres, valeur: o => o.sal_bareme || o.smin != null ? `${o.smin}–${o.smax} € (${o.sal_lib || ""})` : o.ville || "", note: v.detail });
+  }, `Voir les offres : ${vig[+li.dataset.v].nom}`));
+  // Saisonnalité : dite selon le mois de la collecte, pas écrite une fois pour toutes.
+  const mois = new Date(D.date).getMonth() + 1;
+  ecrire("m-saison", mois >= 8 && mois <= 11
+    ? "<b>La saison compte</b> : la plupart des alternances démarrent en septembre-octobre. Une collecte faite à cette période voit la fin de la saison de recrutement : une partie des offres encore en ligne sont des postes difficiles à pourvoir ou des annonces oubliées. Les chiffres remonteront au printemps."
+    : mois >= 2 && mois <= 7 ? "<b>La saison compte</b> : de février à juillet, les entreprises publient leurs alternances pour la rentrée de septembre ; c'est le moment où les offres sont les plus nombreuses."
+    : "<b>La saison compte</b> : en hiver, les offres d'alternance sont peu nombreuses ; les stages de printemps, eux, se publient maintenant.");
   const dispo = D.offres.filter(o => passeMetier(o) && passeContrat(o) && (ecoles || !o.ecole)).length;
   ecrire("appel-titre", `Voir les ${nb(dispo)} offres ${EN()} disponibles pour ${esc(libMetier())}`);
   document.getElementById("appel-offres").href = "offres.html#" + p;
@@ -264,5 +344,5 @@ document.getElementById("p-contrat").addEventListener("click", e => { const b = 
 document.getElementById("p-ecoles").addEventListener("change", e => { ecoles = e.target.checked; rendre(); });
 document.getElementById("p-imprimer").addEventListener("click", () => window.print());
 // Un encadré « À retenir » ouvre la répartition complète du graphique voisin.
-document.querySelectorAll(".retenir[data-g]").forEach(r => r.addEventListener("click", () => verifGraphique(r.dataset.g)));
+document.querySelectorAll(".retenir[data-g]").forEach(r => Site.commeBouton(r, () => verifGraphique(r.dataset.g)));
 rendre();

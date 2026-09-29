@@ -45,7 +45,7 @@ function selection() {
     if (!passeMetier(o) || !passeZone(o)) return false;
     if (E.e !== "1" && o.ecole) return false;
     if (E.r === "1") { const a = age(o); if (a == null || a >= 30) return false; }
-    if (E.s === "1" && o.smin == null) return false;
+    if (E.s === "1" && !Site.salUtile(o)) return false;
     if (o.contrat === "stage" && !durees.has(o.duree_classe || DUREES.at(-1))) return false;
     if (mots.length) { const t = sansAccents(`${o.titre} ${o.ent} ${o.ville} ${o.lieu}`); if (!mots.every(w => t.includes(w))) return false; }
     return true;
@@ -72,7 +72,7 @@ function carte(o) {
     <div class="etiquettes">${etiq}</div>
     <h3>${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.titre)}</a>` : esc(o.titre)}</h3>
     <div class="qui">${esc(o.ent || "Employeur non précisé")}${o.eff ? ` <span class="note">· ${esc(o.eff)} salariés</span>` : ""}</div>
-    <div class="infos"><span>📍 ${esc(o.ville || o.lieu || "Lieu non précisé")}${o.dep ? ` (${esc(o.dep)})` : ""}</span>${o.smin ? `<span class="sal">${nb(o.smin)}${o.smax > o.smin ? "–" + nb(o.smax) : ""} € brut/mois</span>` : ""}<span>${(METIER[o.rome] || {}).libelle || ""}</span></div>
+    <div class="infos"><span>📍 ${esc(o.ville || o.lieu || "Lieu non précisé")}${o.dep ? ` (${esc(o.dep)})` : ""}</span>${o.sal_bareme ? `<span title="L'annonce recopie le barème légal de l'apprentissage (27 % à 100 % du SMIC) : le montant réel dépend de l'âge et de l'année de contrat">Salaire : barème légal</span>` : o.smin ? `<span class="sal">${nb(o.smin)}${o.smax > o.smin ? "–" + nb(o.smax) : ""} € brut/mois</span>` : ""}<span>${(METIER[o.rome] || {}).libelle || ""}</span></div>
     <div class="bas"><span>${quand} · ${esc(via)}</span>${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">Voir l'annonce →</a>` : ""}</div>
   </article>`;
 }

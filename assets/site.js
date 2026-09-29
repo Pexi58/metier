@@ -18,6 +18,7 @@ const Site = (() => {
     ["alternance.html", "Explorer les données"],
     ["offres.html", "Offres disponibles"],
     ["alternance.html#fiabilite", "Méthode et sources"],
+    ["marche.html", "Tout le marché (emplois)"],
   ];
   const ici = location.pathname.split("/").pop() || "presentation.html";
 
@@ -42,7 +43,7 @@ const Site = (() => {
     if (!el) return;
     const pc = (D.qualite && D.qualite.par_contrat) || {};
     el.outerHTML = `<header class="entete"><div class="entete-int">
-      <a class="marque" href="presentation.html"><i>A</i><span>Alternance &amp; stages<small>métiers du marketing</small></span></a>
+      <a class="marque" href="presentation.html"><i>A</i><span>Alternance &amp; stages<small>marketing, digital, communication</small></span></a>
       <nav class="menu" aria-label="Pages">${PAGES.map(([p, l]) => `<a data-page="${p}" href="${p}"${p === ici ? ' class="ici" aria-current="page"' : ""}>${l}</a>`).join("")}</nav>
       <span class="fraicheur" title="Collecte automatique chaque matin sur GitHub">Données du ${dateFr(D.date)} · ${nb(pc.alternance)} alternances, ${nb(pc.stage)} stages</span>
     </div></header>`;
@@ -52,10 +53,12 @@ const Site = (() => {
     const el = document.getElementById("pied");
     if (!el) return;
     el.outerHTML = `<footer class="pied">
+      Réalisé par <a href="https://github.com/Pexi58/metier">Pexi58</a> (M2 MOD, IAE Clermont Auvergne).
       Sources : France Travail, La bonne alternance, Adzuna, croisées avec le répertoire des entreprises (API Recherche d'entreprises).
       Collecte, nettoyage et contrôles : <code>scripts/alternance.mjs</code>, relancé chaque matin par GitHub Actions.
       Chaque chiffre est cliquable pour voir son calcul et les offres comptées. <a href="alternance.html#fiabilite">Méthode, contrôles et limites</a>.
-      Pas de scraping de LinkedIn, Indeed ou APEC (interdit par leurs conditions d'utilisation).
+      Pas de scraping de LinkedIn, Indeed, APEC, HelloWork ou JobTeaser (interdit par leurs conditions d'utilisation).
+      Les pages « Tout le marché » (toutes les offres d'emploi, pas seulement l'alternance) reprennent la base du cours d'analyse de données (M2 MOD, IAE Clermont Auvergne).
     </footer>`;
   }
   // Sommaire latéral : met en évidence la section en cours de lecture.
@@ -70,8 +73,42 @@ const Site = (() => {
   document.addEventListener("DOMContentLoaded", () => { entete(); pied(); sommaire(); });
   if (document.readyState !== "loading") { entete(); pied(); sommaire(); }
 
+  /* ---- Salaires : ce qui se compte, et comment ----
+     Un salaire « utile » est affiché, lisible, et n'est pas le barème légal recopié tel quel
+     (« 486 € à 1 801 € » = 27 % à 100 % du SMIC : ce n'est pas ce que propose l'employeur). */
+  const salUtile = o => o.smin != null && o.sal_etat !== "absent" && !o.sal_bareme;
+  // Quartiles par interpolation (comme Excel QUARTILE.INCLUS) : Q1, médiane, Q3.
+  function quartiles(valeurs) {
+    const t = valeurs.filter(x => x != null && isFinite(x)).sort((a, b) => a - b);
+    if (!t.length) return null;
+    const q = p => { const i = (t.length - 1) * p, b = Math.floor(i); return t[b] + (t[Math.min(b + 1, t.length - 1)] - t[b]) * (i - b); };
+    return { n: t.length, q1: q(0.25), med: q(0.5), q3: q(0.75), min: t[0], max: t.at(-1) };
+  }
+  // Minima légaux (config/alternance.json, remuneration_legale) : tableau HTML, recalculé si le SMIC change.
+  function minimaLegaux(contrat) {
+    const L = D.remuneration_legale;
+    if (!L) return "";
+    const eur = v => Math.round(v).toLocaleString("fr-FR") + " €";
+    const depuis = dateFr(L.smic_depuis);
+    if (contrat === "stage") {
+      const g = L.gratification_horaire * L.heures_mois;
+      return `<p class="note">Gratification minimale d'un stage de plus de 2 mois : <b>${L.gratification_horaire.toLocaleString("fr-FR")} € de l'heure</b>, soit environ <b>${eur(g)} par mois</b> à temps plein (${String(L.heures_mois).replace(".", ",")} h). <a href="${esc(L.source_stage)}" target="_blank" rel="noopener">service-public.fr</a></p>`;
+    }
+    return `<table class="legal"><caption>Minimum légal d'un apprenti, brut par mois (SMIC de ${eur(L.smic_mensuel)} depuis le ${depuis})</caption>
+      <tr><th>Âge</th><th>1<sup>re</sup> année</th><th>2<sup>e</sup> année</th><th>3<sup>e</sup> année</th></tr>`
+      + L.apprentissage.map(l => `<tr><td>${esc(l.age)}</td>${l.taux.map(t => `<td>${eur(L.smic_mensuel * t / 100)} <small>(${t} %)</small></td>`).join("")}</tr>`).join("")
+      + `</table><p class="note">Un étudiant de master a le plus souvent 21 à 25 ans : de ${eur(L.smic_mensuel * 0.53)} à ${eur(L.smic_mensuel * 0.78)}. Le contrat de professionnalisation suit une grille proche. <a href="${esc(L.source)}" target="_blank" rel="noopener">service-public.fr</a></p>`;
+  }
+  // Rend un élément cliquable utilisable au clavier (Entrée, Espace) et annoncé comme bouton.
+  function commeBouton(el, action, libelle) {
+    el.setAttribute("role", "button"); el.tabIndex = 0;
+    if (libelle) el.setAttribute("aria-label", libelle);
+    el.addEventListener("click", e => { if (!e.target.closest("a")) action(e); });
+    el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); action(e); } });
+  }
+
   return {
-    esc, nb, pct, dateFr, lireChoix, memoriser,
+    esc, nb, pct, dateFr, lireChoix, memoriser, salUtile, quartiles, minimaLegaux, commeBouton,
     libDep: code => (D.departements || {})[code] ? `${D.departements[code]} (${code})` : "département " + code,
     villeSimple: v => String(v || "").replace(/\s+\d+(er|e|ème)?\s+(arrondissement|canton)$/i, "").trim(),
     SOURCES: { FT: "France Travail", LBA: "La bonne alternance", ADZ: "Adzuna" },

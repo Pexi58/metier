@@ -1,22 +1,27 @@
-# Le marché de mon métier — les métiers du marketing
+# Alternance et stages en marketing, digital et communication
 
-### 👉 **[Voir le site : vincentfavarin.github.io/metier](https://vincentfavarin.github.io/metier/)**
+### 👉 **[Voir le site : pexi58.github.io/metier](https://pexi58.github.io/metier/)**
 
-Le site est mis à jour chaque matin par une Action GitHub : elle interroge
-l'API France Travail, enregistre les offres du jour et publie les chiffres.
+Le site répond à une question : **où et comment trouver une alternance ou un stage** dans le marketing,
+le digital et la communication ? Combien d'offres, où, dans quels métiers l'alternance est la porte d'entrée,
+pour quelle rémunération, avec quelles compétences. Les données sont collectées chaque matin par deux
+Actions GitHub, et **chaque chiffre est cliquable** : le calcul, les filtres, les sources et la liste des
+offres comptées s'affichent, avec un export CSV pour refaire le calcul dans Excel.
 
-| | |
+| Page | À quoi elle sert |
 |---|---|
-| [Accueil](https://vincentfavarin.github.io/metier/) | les filtres, les chiffres, la carte de France |
-| [Ce que ça paie](https://vincentfavarin.github.io/metier/salaires.html) | fourchettes par niveau, métier, contrat, territoire |
-| [Ce qu'on vous demande](https://vincentfavarin.github.io/metier/exigences.html) | expérience, diplôme, outils, compétences |
-| [Qui recrute](https://vincentfavarin.github.io/metier/recruteurs.html) | entreprises, secteurs, employeurs ouverts aux débutants |
-| [Le marché bouge](https://vincentfavarin.github.io/metier/mouvement.html) | les extractions successives, la fraîcheur des annonces |
+| [Synthèse](https://pexi58.github.io/metier/presentation.html) | l'essentiel pour un métier, une idée par section, les limites |
+| [Explorer les données](https://pexi58.github.io/metier/alternance.html) | tous les filtres, la carte, les entreprises à démarcher, la fiabilité |
+| [Offres disponibles](https://pexi58.github.io/metier/offres.html) | les annonces en ligne ce matin, filtrables, exportables |
+| [Tout le marché](https://pexi58.github.io/metier/marche.html) | toutes les offres d'emploi (pas seulement l'alternance) : la base du cours |
 
-Dossier de travail pour la séance « Écouter le marché de votre métier »
-(M2 MOD, IAE Clermont Auvergne). Dépôt de démonstration : il montre ce que
-l'on attend d'un dossier `avenir`, étape par étape, et la chaîne complète
-API → données → Action planifiée → page GitHub Pages.
+Le détail de la veille alternance (sources, nettoyage, contrôles) est dans [ALTERNANCE.md](ALTERNANCE.md).
+
+**Auteur : Pexi58** — dossier de travail pour la séance « Écouter le marché de votre métier » (M2 MOD, IAE Clermont Auvergne).
+Ce dépôt part du dépôt de démonstration du cours ([VincentFavarin/metier](https://github.com/VincentFavarin/metier)) :
+la chaîne France Travail (`scripts/extraire.py`, `scripts/resumer.py`, pages `marche.html`, `salaires.html`,
+`exigences.html`, `recruteurs.html`, `mouvement.html`) vient de là ; la veille alternance et stages
+(`scripts/alternance.mjs`, `presentation.html`, `alternance.html`, `offres.html`) est l'ajout propre à ce dépôt.
 
 ## Le métier, tel que le marché le nomme
 
@@ -53,14 +58,19 @@ Hauts-de-Seine en tête ; 27 % des offres affichent un salaire, médiane
 
 ## Les métiers suivis
 
-23 codes ROME, choisis pour le M2 MOD parmi les 1 911 du référentiel France
-Travail (la liste vit dans `scripts/extraire.py`, `METIERS`) : le cœur
+24 codes ROME, choisis pour le M2 MOD parmi les 1 911 du référentiel France
+Travail (la liste vit dans `scripts/extraire.py`, `METIERS`, et dans
+`config/alternance.json` pour la veille alternance) : le cœur
 marketing (M1718 chargé de marketing digital, M1716, M1705, M1703, M1620,
 M1706, M1430, M1711), le digital (E1113 e-commerce, D1438, E1101 community
-manager, E1124, E1405 SEO, M1886, M1426, M1719 et E1406 influence — 0 offre
-aujourd'hui, on surveille) et, décochés par défaut, la frontière avec la
-communication et le commerce (E1112, E1103, E1107, E1404, D1506, D1415 CRM).
-Au 22/09/2026 : 3 362 offres actives.
+manager, E1124, E1405 SEO, M1886, M1426, M1719 et E1406 influence, E1127
+brand manager / brand content) et, décochés par défaut, le groupe
+« Communication et commerce », métiers voisins du marketing (E1112, E1103,
+E1107, E1404, D1415 CRM, D1510 chef de secteur GMS). D1506 (merchandising) a été retiré le 29/09/2026.
+E1127 et D1510 ont été ajoutés le 29/09/2026 : les offres « brand manager »
+sont classées par France Travail surtout en E1127, les « chefs de secteur GMS »
+surtout en D1510 (vérifié par une recherche par mots-clés dans l'API).
+Au 22/09/2026 : 3 362 offres actives (23 métiers).
 
 ## La chaîne
 
@@ -69,7 +79,7 @@ API France Travail  →  scripts/extraire.py  →  data/brut/<mois>/<ROME>.jsonl
                                             →  data/actives/<date>.csv         les offres actives du jour (rome, id)
                                             →  data/serie.csv                  par jour et par métier : total, nouvelles, modifiées
                        scripts/resumer.py   →  data/resume.json                ce que les pages affichent (+ data/geo/, cache des positions)
-                       index.html + 4 pages →  https://vincentfavarin.github.io/metier/
+                       marche.html + 4 pages →  https://pexi58.github.io/metier/marche.html
                        .github/workflows/veille.yml : GitHub relance tout ça chaque matin à 7 h
 ```
 
@@ -86,7 +96,7 @@ API France Travail  →  scripts/extraire.py  →  data/brut/<mois>/<ROME>.jsonl
 - Cinq pages HTML statiques, un chantier par page, toutes servies telles quelles.
   Chacune charge `data/resume.json` et recalcule ses graphiques Chart.js dans le
   navigateur selon la sélection ; net mensuel estimé = brut × 0,78 / 12.
-  - `index.html` — les filtres, les chiffres-clés, la carte Leaflet (survol =
+  - `marche.html` — les filtres, les chiffres-clés, la carte Leaflet (survol =
     l'offre, clic = l'annonce sur France Travail), les départements, les
     contrats, et les liens vers les quatre autres pages.
   - `salaires.html` — ce que ça paie. `exigences.html` — ce qu'on vous demande.
@@ -132,4 +142,5 @@ copy .env.example .env        (puis remplir avec ses identifiants francetravail.
 - Les identifiants sont dans `.env` (local) ou dans les secrets du dépôt
   (GitHub) : jamais dans un fichier versionné.
 - Un canal, une requête, une date : chaque chiffre du site les affiche.
-- Pas de scraping de LinkedIn, APEC ou Indeed (interdit par leurs CGU).
+- Pas de scraping de LinkedIn, APEC, Indeed, HelloWork ou JobTeaser (interdit par leurs CGU ;
+  HelloWork et JobTeaser n'ont pas d'API ouverte, voir ALTERNANCE.md).

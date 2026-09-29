@@ -36,7 +36,7 @@ const Verif = (() => {
     eff: "Taille de l'employeur : tranche d'effectif de l'entreprise dans le répertoire SIRENE (API Recherche d'entreprises), retrouvée par le nom et le département de l'offre ; à défaut, tranche donnée par France Travail.",
     section: "Secteur : code NAF (activité principale) de l'employeur, regroupé en grandes sections. Source : champ de l'offre ou répertoire SIRENE.",
     outils: "Outils cités : mots cherchés dans le titre et le texte de l'annonce (mot entier), selon la grille de config/alternance.json. Une offre peut en citer plusieurs.",
-    salaire: "Salaire : libellé de la source ramené en brut mensuel. Un montant mensuel saisi dans la case « annuel » est corrigé ; les montants hors 300–6 000 € sont écartés ; les salaires estimés par Adzuna ne sont pas repris.",
+    salaire: "Salaire : libellé de la source ramené en brut mensuel. Un montant mensuel saisi dans la case « annuel » est corrigé ; les montants hors 300–6 000 € sont écartés ; les salaires estimés par Adzuna ne sont pas repris. Les fourchettes « 27 % à 100 % du SMIC » (le barème légal de l'apprentissage recopié en entier, ex. « 486 € à 1 801 € ») ne sont pas ce que l'employeur propose : elles sont retirées des médianes.",
     age: "Ancienneté : écart entre la date de publication de l'annonce et la date de la collecte.",
     rome: "Métier : code ROME donné par la source (France Travail, La bonne alternance) ; pour Adzuna, déduit du titre (tous les mots-clés du métier doivent y figurer), sinon métier de la recherche.",
     ecole: "École : employeur dont l'activité est l'enseignement (NAF 85) ou dont le nom est celui d'une école connue.",

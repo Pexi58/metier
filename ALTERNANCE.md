@@ -1,12 +1,12 @@
 # Veille alternance — ce qui a été ajouté au dépôt
 
 Deux pages et un script qui se concentrent sur les **offres en alternance** (apprentissage et
-professionnalisation), pour **n'importe lequel des 23 métiers suivis** : le métier n'est pas figé,
+professionnalisation), pour **n'importe lequel des 24 métiers suivis** : le métier n'est pas figé,
 il se choisit dans la page. Toute la France est couverte, et **Auvergne-Rhône-Alpes** l'est en détail.
 
 ## Le site : trois pages, un même menu
 
-En ligne (mis à jour chaque matin) : **https://pexi58.github.io/metier/presentation.html**
+En ligne (mis à jour chaque matin) : **https://pexi58.github.io/metier/** (l'adresse du site ouvre directement la Synthèse)
 
 | Page | À quoi elle sert |
 |---|---|
@@ -33,19 +33,32 @@ une case permet de les afficher.
 - **Partager une vue** : l'adresse de la page garde le métier et les filtres (ex. `presentation.html#m=M1620`).
 - **Travailler dans Excel** : boutons « Exporter (CSV) ».
 - **Ajouter un métier** : une ligne dans `config/alternance.json` (code ROME, libellé, groupe, mots-clés), puis mettre à jour.
+  Pour qu'il ait aussi sa part d'alternance (toutes offres France Travail), l'ajouter dans `scripts/extraire.py` (METIERS).
+- **Métiers vides** : un métier sans aucune offre le matin de la collecte n'est pas publié (ni liste, ni graphique) ;
+  il reste suivi et réapparaît seul dès qu'une offre paraît. La liste du jour est dans `metiers_vides` de `data/alternance.json`.
 
 ## D'où viennent les offres
 
 | Source | Clé (dans `.env`) | Ce qu'elle apporte |
 |---|---|---|
-| France Travail — base du cours (`data/brut`) | aucune | toutes les offres des 23 métiers, France entière (elle relaie déjà PMEJob, DirectEmploi, Meteojob…) |
+| France Travail — base du cours (`data/brut`) | aucune | toutes les offres des 24 métiers, France entière (elle relaie déjà PMEJob, DirectEmploi, Meteojob…) |
 | La bonne alternance (API officielle de l'alternance) | `LBA_API_KEY` | recherche nationale + recherche autour de 13 villes d'Auvergne-Rhône-Alpes ; donne aussi les entreprises « susceptibles de recruter en alternance » |
 | Adzuna (agrégateur de sites d'emploi) | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | recherche nationale + recherche dédiée à la région ; le métier est déduit du titre de l'offre |
 | API Recherche d'entreprises (État) | aucune | taille, secteur, école ou non de chaque employeur ; liste de toutes les entreprises d'un département |
 
 Une même offre vue dans plusieurs sources n'est comptée **qu'une fois**.
-**Pas de scraping** de LinkedIn, Indeed, HelloWork ou Welcome to the Jungle : leurs conditions d'utilisation
+**Pas de scraping** de LinkedIn, Indeed, HelloWork, JobTeaser ou Welcome to the Jungle : leurs conditions d'utilisation
 l'interdisent (règle du dépôt). Les API ci-dessus sont les voies autorisées.
+
+### HelloWork et JobTeaser : pourquoi ils ne sont pas dans les sources (vérifié le 29/09/2026)
+
+| | API pour lire les offres ? | Collecte automatique | Accès indirect autorisé |
+|---|---|---|---|
+| **HelloWork** | Non. La seule API (« ATS Partner ») sert aux logiciels de recrutement à *recevoir* des candidatures. Les flux XML sont réservés aux sites partenaires, sous contrat. | Interdite : [CGU](https://www.hellowork-group.com/fr/legal/cgu-hellowork/) art. 1 et 8.2 (extraction par systèmes automatisés « strictement interdite ») ; [robots.txt](https://www.hellowork.com/robots.txt) : `Disallow: /`. | HelloWork est [partenaire de France Travail](https://www.francetravail.fr/candidat/vos-services-en-ligne/des-partenaires-pour-vous-propos.html) et d'Adzuna, mais l'API France Travail ne donne que les offres des partenaires qui l'acceptent : dans nos données du 28/09, **aucune** offre n'arrive « via HelloWork ». La bonne alternance reçoit le flux HelloWork mais ne le rediffuse pas ([ticket LBA](https://github.com/mission-apprentissage/labonnealternance/issues/5474)), sauf exception annoncée du 11 au 15 octobre 2026 ([ticket](https://github.com/mission-apprentissage/labonnealternance/issues/5565)). |
+| **JobTeaser** | Non. Des API existent, réservées aux partenaires (écoles, logiciels RH), sur contrat. | Interdite : [conditions membres](https://www.jobteaser.com/fr/about/terms-for-members) (téléchargement automatisé interdit). La plupart des offres sont derrière la connexion au service carrière de l'école. | Aucun relais trouvé (ni France Travail, ni Adzuna). Seule piste : le service carrière de l'école peut [exporter les offres](https://helpcenter.jobteaser.com/hc/fr/articles/5723950176914-Exporter-les-offres-%C3%A0-des-fins-d-analyses) de son établissement. |
+
+Pour aller plus loin, il faudrait demander un accès par écrit (partenariats HelloWork Group, ou JobTeaser via l'école).
+Les offres « via » chaque partenaire de France Travail se lisent dans la page Explorer, section Fiabilité.
 
 **Quotas** : La bonne alternance accepte 60 appels par 31 secondes, Adzuna (offre gratuite) environ 25 par minute
 et 250 par jour. Le script espace ses appels, et garde le résultat Adzuna du jour en cache : relancer le même jour
@@ -53,14 +66,29 @@ ne consomme pas le quota.
 
 ## Ce que le script vérifie et corrige
 
-1. **Doublons** : même identifiant dans deux sources ; même annonce republiée (même titre, même employeur, même ville).
-2. **Salaires** ramenés en brut mensuel ; un montant mensuel saisi dans la case « annuel » est corrigé ; hors 300–6 000 € : écarté.
-3. **Employeurs** retrouvés dans le répertoire officiel des entreprises (SIRENE) par leur nom ; **écoles** (activité 85,
+1. **Doublons** : même identifiant dans deux sources ; même annonce republiée (même titre, même employeur, même ville) ;
+   **copie relayée** par un site d'emploi qui efface l'employeur et change la ville (même titre une fois la ville et « H/F » retirés,
+   même texte ou même département). La copie reprend l'employeur de l'original : une offre d'école republiée sans nom
+   est donc reconnue comme offre d'école, et masquée avec elles.
+2. **Hors sujet** : les intitulés de la liste `titres_hors_sujet` (conseiller de vente, assistant d'agence d'intérim, médiateur…)
+   sont écartés quelle que soit la source ; Adzuna ne garde le métier de sa recherche que si le titre en cite un mot
+   (« Commercial en alternance », remonté par la recherche « e-commerce », n'est plus compté en e-commerce).
+3. **Salaires** ramenés en brut mensuel ; un montant mensuel saisi dans la case « annuel » est corrigé ; hors 300–6 000 € : écarté.
+   Le **barème légal recopié** (« 486 € à 1 801 € » = 27 % à 100 % du SMIC) est repéré et retiré des médianes. Stages et
+   alternances ne sont jamais mélangés dans une médiane. Le SMIC et les barèmes sont dans `config/alternance.json`
+   (`remuneration_legale`) : une ligne à changer quand le SMIC augmente.
+4. **Employeurs** retrouvés dans le répertoire officiel des entreprises (SIRENE) par leur nom ; **écoles** (activité 85,
    enseignement) et **intérim / cabinets** (activité 78) repérés.
-4. **Entreprises « susceptibles de recruter »** : La bonne alternance en renvoie parfois de très loin ; on ne garde que
+5. **Entreprises « susceptibles de recruter »** : La bonne alternance en renvoie parfois de très loin ; on ne garde que
    celles qui sont vraiment dans le rayon demandé et dans la région.
-5. **Contrôles automatiques** (identifiants uniques, dates, départements, positions, liens, et recoupement avec
+6. **Contrôles de forme** (identifiants uniques, dates, départements, positions, liens, et recoupement avec
    `data/resume.json` de la base du cours) : affichés dans le terminal et dans la section « Fiabilité ».
+7. **Contrôles de sens**, qui comptent au lieu d'afficher « tout va bien » : alternances dont le titre dit « stage »,
+   ville du titre différente du lieu, barème recopié, rémunération sous le minimum légal, intitulés de niveau direction,
+   stages sans durée, métier déduit d'une recherche par mots-clés. Chaque ligne est cliquable dans les pages et
+   montre les offres concernées.
+8. **Compétences** : les pourcentages ne portent que sur les offres dont on a le texte complet (France Travail,
+   La bonne alternance) ; Adzuna n'en donne qu'un extrait.
 
 ## Les fichiers
 
