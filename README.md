@@ -13,6 +13,7 @@ offres comptées s'affichent, avec un export CSV pour refaire le calcul dans Exc
 | [Synthèse](https://pexi58.github.io/metier/presentation.html) | l'essentiel pour un métier, une idée par section, les limites |
 | [Explorer les données](https://pexi58.github.io/metier/alternance.html) | tous les filtres, la carte, les entreprises à démarcher, la fiabilité |
 | [Offres disponibles](https://pexi58.github.io/metier/offres.html) | les annonces en ligne ce matin, filtrables, exportables |
+| [Évolution](https://pexi58.github.io/metier/evolution.html) | le marché dans le temps : volume, nouvelles et retirées, durée de vie, comparaison de deux dates |
 | [Tout le marché](https://pexi58.github.io/metier/marche.html) | toutes les offres d'emploi (pas seulement l'alternance) : la base du cours |
 
 Le détail de la veille alternance (sources, nettoyage, contrôles) est dans [ALTERNANCE.md](ALTERNANCE.md).

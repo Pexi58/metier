@@ -1,0 +1,71 @@
+# Rotation mensuelle : chaque mois écoulé est compressé (tar.gz) et déposé dans les Releases du dépôt
+# (« donnees-AAAA-MM »). Les mois de plus de 24 mois sont ensuite retirés du dossier data/ — seulement
+# si leur archive est bien en ligne. Les séries (data/serie.csv, data/historique/index.json, jours.json,
+# stats.json) restent toujours dans le dépôt : la page Évolution ne perd rien.
+# Pour retrouver un mois : onglet Releases du dépôt, télécharger l'archive, la dézipper à la racine du projet.
+# Lancé le 2 de chaque mois à 4 h UTC (avant les deux veilles du matin), ou à la main (Run workflow).
+name: archive-mensuel
+
+on:
+  schedule:
+    - cron: "0 4 2 * *"
+  workflow_dispatch:
+    inputs:
+      conserver:
+        description: "Nombre de mois gardés dans data/ (les plus anciens sont archivés puis retirés)"
+        default: "24"
+
+permissions:
+  contents: write
+
+jobs:
+  archiver:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CONSERVER: ${{ github.event.inputs.conserver || '24' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Compresser chaque mois écoulé et le déposer dans une Release
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/archives"
+          for mois in $(node scripts/archiver-mois.mjs lister); do
+            tag="donnees-$mois"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "$tag : déjà en ligne"
+            else
+              node scripts/archiver-mois.mjs creer "$mois" "$RUNNER_TEMP/archives/$tag.tar.gz"
+              gh release create "$tag" "$RUNNER_TEMP/archives/$tag.tar.gz" \
+                --title "Données $mois" --latest=false \
+                --notes "Archive compressée des données de $mois : brut France Travail, offres actives par jour, présence et versions des offres alternance/stage. À dézipper à la racine du projet (tar -xzf $tag.tar.gz)."
+            fi
+          done
+
+      - name: Retirer du dépôt les mois de plus de N mois, une fois leur archive vérifiée
+        run: |
+          set -e
+          for mois in $(node scripts/archiver-mois.mjs purgeables --conserver "$CONSERVER"); do
+            tag="donnees-$mois"
+            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -q "^$tag.tar.gz$"; then
+              node scripts/archiver-mois.mjs purger "$mois"
+            else
+              echo "$tag : archive introuvable dans les Releases, rien n'est supprimé"
+            fi
+          done
+
+      - name: Enregistrer
+        run: |
+          git config user.name "veille-bot"
+          git config user.email "actions@github.com"
+          git add -A data
+          git commit -m "archive mensuelle : retrait des mois de plus de $CONSERVER mois" || echo "rien à retirer"
+          git pull --rebase
+          git push

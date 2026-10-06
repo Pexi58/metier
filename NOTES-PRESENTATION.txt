@@ -1,0 +1,242 @@
+﻿# Notes de présentation : comment fonctionne le projet
+
+## En une phrase
+
+Un site web qui répond à la question : **où et comment trouver une alternance ou un stage en marketing, digital et communication ?** Des robots collectent les offres chaque matin, et le site affiche les chiffres. Chaque chiffre est cliquable : on voit le calcul, les sources et la liste des offres.
+
+- Site en ligne : https://pexi58.github.io/metier/
+- Dépôt GitHub : https://github.com/Pexi58/metier
+- Auteur : Pexi58, pour la séance « Écouter le marché de votre métier » (M2 MOD, IAE Clermont Auvergne)
+
+## Le principe en 4 étapes
+
+```
+1. COLLECTER   →   2. NETTOYER   →   3. STOCKER   →   4. AFFICHER
+ (API d'offres)    (scripts)         (GitHub)          (site web)
+```
+
+1. **Collecter** : chaque matin, des robots interrogent des API officielles (pas de scraping).
+2. **Nettoyer** : les scripts dédoublonnent les offres, extraient les salaires, les outils cités et la localisation. Ils lancent aussi des contrôles de fiabilité.
+3. **Stocker** : les résultats sont enregistrés dans le dépôt GitHub (dossier `data/`).
+4. **Afficher** : les pages HTML lisent ces données et dessinent les graphiques dans le navigateur.
+
+## D'où viennent les données
+
+| Source | Ce qu'elle apporte |
+|---|---|
+| **France Travail** (API Offres d'emploi) | toutes les offres des 20 métiers suivis, France entière |
+| **La bonne alternance** (API officielle) | offres en alternance et entreprises susceptibles de recruter, autour de 13 villes d'Auvergne-Rhône-Alpes |
+| **Adzuna** (agrégateur) | offres complémentaires, recherche nationale et régionale |
+| **API Recherche d'entreprises** (État) | taille, secteur, école ou non, pour chaque employeur |
+
+- Une même offre vue dans plusieurs sources n'est comptée qu'une fois.
+- Les offres publiées par des écoles sont masquées par défaut, car elles recrutent surtout leurs futurs élèves.
+- **Pas de scraping** de LinkedIn, Indeed, HelloWork, JobTeaser ou Welcome to the Jungle : leurs conditions d'utilisation l'interdisent. Les API ci-dessus sont les voies autorisées.
+
+## Les métiers suivis
+
+20 codes ROME (référentiel France Travail). Le cœur est le **M1718, chargé de marketing digital**. Il y a aussi :
+- marketing : M1716, M1705, M1703, M1620, M1430, M1711
+- digital : e-commerce, community manager, SEO, chef de projet web, transformation digitale, brand manager
+- groupe « Communication et commerce » : décoché par défaut
+
+Pour ajouter un métier : une ligne dans `config/alternance.json`, et dans `scripts/extraire.py` (liste `METIERS`) pour avoir aussi les offres France Travail.
+
+## Les fichiers importants
+
+| Dossier ou fichier | Rôle |
+|---|---|
+| `scripts/extraire.py` | collecte France Travail, une requête par métier |
+| `scripts/resumer.py` | calcule salaires, outils, positions, et produit `data/resume.json` |
+| `scripts/alternance.mjs` | veille alternance et stages (La bonne alternance, Adzuna, etc.) |
+| `config/alternance.json` | liste des métiers, région suivie, villes-centres |
+| `data/` | toutes les données (voir plus bas) |
+| `*.html` + `assets/` | les pages du site |
+| `.env` | clés d'API, **local seulement** |
+| `.github/workflows/` | les deux robots du matin |
+
+## Les pages du site
+
+- **Synthèse** (`presentation.html`) : l'essentiel pour un métier, une idée par section, imprimable en PDF.
+- **Explorer les données** (`alternance.html`) : tous les filtres, la carte, les entreprises à démarcher, la fiabilité.
+- **Offres disponibles** (`offres.html`) : les annonces en ligne, filtrables, exportables en CSV.
+- **Tout le marché** (`marche.html`) et ses pages liées (salaires, exigences, recruteurs, mouvement) : le marché de l'emploi en général.
+
+**Chaque chiffre est vérifiable.** Un clic ouvre une fenêtre avec le calcul (par exemple « 188 ÷ 938 = 20 % »), les filtres appliqués, les sources, et la liste des offres comptées, exportable en CSV pour refaire le calcul dans Excel.
+
+## L'automatisation (les robots GitHub Actions)
+
+Deux robots tournent chaque matin sur les serveurs de GitHub, sans que l'ordinateur soit allumé :
+
+| Robot | Heure | Ce qu'il fait |
+|---|---|---|
+| `veille.yml` | 5 h UTC (7 h à Paris en été) | lance `extraire.py` puis `resumer.py`, puis enregistre le résultat |
+| `alternance.yml` | 5 h 40 UTC | lance `alternance.mjs`, puis enregistre le résultat |
+
+- Chaque robot fait un **commit** : un nouvel enregistrement dans l'historique du dépôt. Le site se met à jour tout seul, car GitHub Pages republie le dépôt.
+- On peut aussi les lancer à la main avec le bouton « Run workflow » dans l'onglet Actions.
+- Les deux robots n'écrivent pas les mêmes fichiers, donc pas de conflit.
+- Si un contrôle de qualité échoue, la page est quand même publiée et l'échec s'affiche dans la section « Fiabilité ».
+
+## Sauvegarde et historique des données
+
+**GitHub est la sauvegarde principale.** Tout est versionné avec git : chaque jour ajoute un commit, donc l'historique complet est conservé et rien n'est écrasé.
+
+- **Le brut est conservé intégralement** (`data/brut/<mois>/<ROME>.jsonl`). Une offre est écrite la première fois qu'on la voit, et de nouveau si son contenu change (empreinte SHA-1). On garde donc l'évolution de chaque annonce, version par version. Relancer le même jour n'écrit rien deux fois.
+- **`data/actives/<date>.csv`** : la liste des offres actives de chaque jour.
+- **`data/serie.csv`** : par jour et par métier, le total, les nouvelles offres et les modifiées. C'est la série temporelle.
+- **`data/resume.json`** : ce que les pages affichent.
+- **`data/archive-2026-09-22/`** : archive de la première journée.
+- **Volume** : 13 Mo le premier jour, puis 2 à 3 Mo par jour, soit environ 1 Go par an. La limite recommandée de GitHub est 1 Go. Quand le brut sera trop gros, il faudra archiver chaque mois écoulé (compressé) dans les Releases GitHub ou sur Hugging Face, et ne garder que les derniers mois dans le dépôt.
+- **Les secrets** (clés d'API) sont dans le fichier `.env` en local, et dans *Settings → Secrets* sur GitHub. `.env` est dans `.gitignore` : il n'est jamais envoyé sur GitHub.
+- Les résultats du jour d'Adzuna (`data/alternance-cache/adzuna-*.json`) restent en local uniquement, ils sont aussi dans `.gitignore`.
+
+## Les 3 scripts à double-cliquer (sur le PC)
+
+| Script | À quoi il sert |
+|---|---|
+| `recuperer-depuis-github.cmd` | récupère les données collectées par les robots (`git pull`), puis ouvre la Synthèse |
+| `envoyer-sur-github.cmd` | enregistre mes modifications locales et les envoie sur GitHub (commit, pull, push). Rien n'est effacé. En cas de conflit, la version du PC est gardée, celle du robot reste dans l'historique |
+| `mettre-a-jour-alternance.cmd` | relance la veille alternance en local (5 à 10 minutes, car les API limitent les appels) |
+
+**Attention** : le dossier local avait un relevé du 29/09/2026. Avant de présenter, lance `recuperer-depuis-github.cmd` pour avoir les données du jour.
+
+## Ce que j'ai appris du marché (première journée, 22/09/2026)
+
+Trois requêtes le même jour, sur la même API :
+
+| Requête | Offres | Lecture |
+|---|---|---|
+| mots-clés « chef de projet marketing digital » | 22 | trop étroit, avec du bruit |
+| **code ROME M1718** | 113 | homogène : c'est la requête de la veille |
+| mots-clés « marketing digital » | 424 | large, mais 191 annonces identiques d'un même réseau : à dédoublonner avant de compter |
+
+Sur M1718 : 0 offre dans le Puy-de-Dôme, 11 en Auvergne-Rhône-Alpes, Paris et Hauts-de-Seine en tête. 27 % des offres affichent un salaire, médiane 31 000 à 35 700 € bruts annuels. Les compétences qui reviennent : réseaux sociaux, anglais, SEO/SEA, GA4, IA.
+
+**Leçon méthodologique** : le choix de la requête change le chiffre d'un facteur 4 ou 5. C'est pourquoi chaque chiffre du site affiche sa requête et sa date.
+
+## Limites à assumer à l'oral
+
+- Seules les offres **publiées** sont comptées (le marché caché n'est pas visible).
+- Seulement 27 % des offres affichent un salaire.
+- Les offres de HelloWork et JobTeaser ne sont pas accessibles : pas d'API ouverte, et la collecte automatique est interdite par leurs CGU.
+- Les offres douteuses (sans poste, salaires invraisemblables) sont retirées ou signalées « à vérifier ».
+- Le net mensuel est estimé : brut × 0,78 ÷ 12.
+
+## Pour la démo (ordre suggéré)
+
+1. Lancer `recuperer-depuis-github.cmd` pour avoir les données du jour.
+2. Ouvrir le site : **Synthèse** d'abord, avec les chiffres-clés.
+3. Cliquer sur un chiffre pour montrer le calcul, les sources et la liste des offres. C'est l'argument fort.
+4. Montrer **Explorer les données** : la carte et les filtres.
+5. Montrer **Offres disponibles** et l'export CSV.
+6. Montrer l'onglet **Actions** de GitHub : les robots du matin et leur historique de commits.
+7. Conclure sur les limites.
+
+---
+
+# Annexe : toutes les variables disponibles
+
+Il y a 4 niveaux de données, du plus brut au plus travaillé.
+
+## 1. Une offre « marché » (`data/resume.json` → `offres[]`, 3 511 offres)
+
+Source : France Travail. Une ligne = une offre, tous contrats confondus.
+
+| Variable | Contenu |
+|---|---|
+| `id` | identifiant France Travail de l'offre |
+| `rome` | code métier ROME (ex. M1718) |
+| `intitule` | titre de l'annonce |
+| `entreprise` | nom de l'employeur |
+| `lieu`, `dep` | lieu (« 80 - ROYE ») et numéro de département |
+| `lat`, `lon`, `prec` | coordonnées GPS et précision de la position (`offre`, `commune`, `departement`) |
+| `contrat` | CDI, CDD, MIS (intérim), SAI (saisonnier), LIB, DDI, CCE, FRA |
+| `alternance` | vrai ou faux |
+| `experience`, `exp_exige`, `exp_ans` | expérience demandée (texte, exigée ou non, nombre d'années) |
+| `salaire`, `smin`, `smax` | libellé du salaire, minimum et maximum annuels bruts calculés |
+| `date`, `vu_le` | date de publication, date où on l'a vue pour la première fois |
+| `url` | lien vers l'annonce |
+| `outils` | outils cités dans la description (GA4, SEO, etc.) |
+| `teletravail` | télétravail possible ou non |
+| `competences` | compétences listées par France Travail |
+| `niveau` | niveau de poste déduit (assistant, junior, etc.) |
+| `nature` | nature du contrat |
+| `qualification`, `formation` | catégorie (cadre, employé…) et formation demandée |
+| `secteur` | secteur d'activité |
+| `temps` | temps plein ou partiel |
+| `postes` | nombre de postes à pourvoir |
+
+Autres blocs du fichier : `metiers` (24 métiers et nombre d'offres actives), `outils`, `contrats`, `niveaux`, `formations`, `serie` (nombre d'offres par jour et par métier), `versions_conservees`, `sans_position`.
+
+## 2. Une offre « alternance et stage » (`data/alternance.json` → `offres[]`, 1 938 offres)
+
+Sources : France Travail, La bonne alternance, Adzuna, regroupées et dédoublonnées.
+
+| Variable | Contenu |
+|---|---|
+| `id`, `src`, `via` | identifiant, source (FT, LBA, ADZ) et site relais d'origine |
+| `srcs`, `annonces` | toutes les sources où l'offre apparaît, et nombre d'annonces fusionnées |
+| `rome` | métier ROME (déduit du titre pour Adzuna) |
+| `titre`, `ent` | titre et employeur |
+| `naf`, `secteur`, `section` | code d'activité de l'entreprise, secteur, section NAF (A à U) |
+| `eff_lib` | taille de l'entreprise (tranche d'effectif) |
+| `lieu`, `ville`, `commune`, `cp`, `dep`, `reg` | localisation à tous les niveaux |
+| `lat`, `lon`, `prec` | position GPS et sa précision |
+| `type` | apprentissage, professionnalisation ou stage |
+| `contrat` | alternance ou stage |
+| `duree` | durée en mois |
+| `diplome`, `dipl_src` | diplôme visé, et d'où on l'a lu (champ de la source ou texte) |
+| `debutant` | accepte les débutants |
+| `sal_lib`, `smin`, `smax`, `sal_etat` | salaire affiché, minimum, maximum, et état (`ok`, `absent`, invraisemblable…) |
+| `sal_bareme` | salaire seulement recopié du barème légal |
+| `date`, `maj`, `vu_le` | publication, mise à jour, première observation |
+| `url` | lien vers l'annonce |
+| `outils`, `tele`, `postes` | outils cités, télétravail, nombre de postes |
+| `ecole`, `interim`, `publie_par` | publiée par une école, par une agence d'intérim, ou par l'entreprise |
+
+Les `offres_signalees` (8) ont des champs en plus : `alertes` (le problème détecté), `rome_deduit`, `duree_min`, `duree_classe`.
+
+Autres blocs du fichier : `metiers` (offres en alternance, en stage, titres fréquents), `remuneration_legale` (SMIC, barème apprentissage, gratification de stage), `classes_duree`, `diplomes`, `classes_effectif`, `regions`, `departements`, `serie`, `region_suivie`, `qualite` (contrôles de fiabilité : doublons, salaires invraisemblables, offres sans poste, etc.).
+
+## 3. Les entreprises à démarcher (`data/alternance-recruteurs.json` → `recruteurs[]`, 4 965 entreprises)
+
+| Variable | Contenu |
+|---|---|
+| `siret`, `nom` | identifiant et nom de l'entreprise |
+| `naf`, `secteur` | activité |
+| `eff` | taille |
+| `adresse`, `dep`, `lat`, `lon` | localisation |
+| `url` | lien (site ou fiche) |
+| `romes` | métiers pour lesquels elle est susceptible de recruter en alternance |
+
+## 4. Les données brutes France Travail (`data/brut/<mois>/<ROME>.jsonl`)
+
+Une ligne = une version d'une offre : `id`, `empreinte` (SHA-1, détecte les modifications), `vu_le`, `rome`, et `offre` avec **tous** les champs de l'API :
+
+- **Annonce** : `intitule`, **`description`** (le texte complet), `dateCreation`, `dateActualisation`
+- **Métier** : `romeCode`, `romeLibelle`, `appellationlibelle`
+- **Lieu** : `lieuTravail.libelle`, `.latitude`, `.longitude`, `.codePostal`, `.commune`
+- **Entreprise** : `entreprise.nom`, `entrepriseAdaptee`, `employeurHandiEngage`, `codeNAF`, `secteurActivite`, `secteurActiviteLibelle`
+- **Contrat** : `typeContrat`, `typeContratLibelle`, `natureContrat`, `alternance`, `dureeTravailLibelle`, `dureeTravailLibelleConverti`, `nombrePostes`
+- **Profil demandé** : `experienceExige`, `experienceLibelle`, `formations[]`, `langues[]`, `permis[]`, `competences[]`, `qualitesProfessionnelles[]`, `qualificationCode`, `qualificationLibelle`
+- **Salaire** : `salaire.libelle`, `.complement1`, `.complement2`, `.listeComplements[]`
+- **Conditions** : `deplacementCode`, `deplacementLibelle`, `contexteTravail.horaires[]`
+- **Origine** : `origineOffre.origine`, `.urlOrigine`, `offresManqueCandidats`
+- **Contact** : `contact.nom`, `.coordonnees1`, `.courriel`
+
+## 5. Les séries dans le temps (CSV)
+
+- `data/serie.csv` : `date`, `rome`, `total`, `recuperees`, `nouvelles`, `modifiees`. Une ligne par jour et par métier.
+- `data/actives/<date>.csv` : `rome`, `id`, `date_actualisation`. La liste des offres actives ce jour-là.
+
+## Ce que ça permet d'étudier
+
+- **Volume** : combien d'offres, par métier, par zone, par jour (évolution).
+- **Géographie** : département, région, ville, carte.
+- **Rémunération** : salaire affiché, médiane, comparaison au SMIC et au barème légal.
+- **Compétences et outils** : ce qui revient le plus.
+- **Niveau demandé** : diplôme, expérience, débutant accepté.
+- **Recruteurs** : qui publie le plus, taille et secteur des entreprises.
+- **Dynamique du marché** : nouvelles offres, offres modifiées, durée de vie d'une annonce (avec `actives/` et `brut/`).
+- **Qualité des données** : doublons, salaires invraisemblables, part d'écoles.

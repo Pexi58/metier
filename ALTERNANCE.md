@@ -100,6 +100,48 @@ ne consomme pas le quota.
    le tri par défaut met **les offres les plus complètes et fiables d'abord** (employeur nommé, salaire exploitable,
    texte complet, lieu exact, récente, sans alerte) ; une case permet de masquer les offres à vérifier.
 
+## L'archive : les offres qui ne sont plus en ligne
+
+`data/alternance.json` ne contient que les offres actives du matin. Pour garder la trace des autres et comparer dans le temps,
+`alternance.mjs` alimente aussi `data/historique/` à chaque lancement (rien n'est jamais supprimé) :
+
+| Fichier | Contenu |
+|---|---|
+| `offres/<mois>.jsonl` | une ligne par **version** d'offre (écrite la première fois qu'on la voit, et à nouveau si son contenu change) |
+| `index.json` | par offre : `[première vue, dernière vue, nombre de jours vue, empreinte]` |
+| `presence/<date>.csv` | les offres vues ce jour-là (`id, rome, contrat, dep, signalee`) |
+| `jours.json` | par jour : nombre d'offres par source (pour repérer une source en panne ce jour-là) |
+| `stats.json` / `stats.js` | par jour : total, alternance/stage, nouvelles, retirées, durée de vie médiane, par métier et région, salaire médian. Lu par la page **Évolution** |
+
+- Une offre est **retirée** quand elle n'apparaît plus dans les fichiers de présence ; sa dernière vue date son retrait.
+  Durée de vie = dernière vue − première vue. Avant de conclure à un retrait, vérifier dans `jours.json` que sa source répondait ce jour-là.
+- Les offres écartées comme « sans poste » sont archivées aussi (`signalee = 1`).
+- Relancer le même jour n'écrit rien deux fois ; un lancement local sans clés d'API n'efface rien.
+- Les fichiers sont versionnés par le robot du matin (`git add data`). Ordre de grandeur : quelques centaines de Ko par jour.
+
+### Rotation mensuelle et Releases
+
+`.github/workflows/archive-mensuel.yml` (le 2 de chaque mois, ou « Run workflow ») compresse chaque mois écoulé
+(`scripts/archiver-mois.mjs`, environ 3 fois plus petit) et le dépose dans une **Release** `donnees-AAAA-MM` : brut France Travail,
+offres actives par jour, présence et versions des offres alternance/stage. Les mois de **plus de 24 mois** sont ensuite retirés
+de `data/`, seulement si leur archive est bien en ligne. Restent toujours dans le dépôt : `data/serie.csv`, `index.json`, `jours.json`,
+`stats.json` (la page Évolution ne perd rien).
+- Retrouver un mois : onglet Releases → télécharger `donnees-AAAA-MM.tar.gz` → `tar -xzf` à la racine du projet.
+- Test à la main : `node scripts/archiver-mois.mjs lister`, `creer 2026-09 archive.tar.gz`, `purgeables --conserver 24`.
+- Retirer des fichiers du dépôt ne réduit pas son poids sur GitHub : l'historique git les garde. La rotation protège surtout
+  le dossier de travail ; la sauvegarde compressée est dans les Releases.
+
+### Anciennes versions du code
+
+`.github/workflows/versions-code.yml` : à chaque envoi de code (scripts, pages, styles, config, workflows) sur `main`, GitHub publie une Release
+`code-AAAA-MM-JJ-HHMM` avec un zip du projet **sans les données**. Revenir en arrière = télécharger la version voulue dans l'onglet Releases.
+(L'historique ligne par ligne de chaque fichier reste dans l'onglet Commits.)
+
+### La page Évolution
+
+`evolution.html` : volume par jour (alternance / stage), nouvelles et retirées, durée de vie des offres, série France Travail par métier
+(depuis le 22/09), comparaison de deux dates, salaire médian, régions. Les courbes de l'archive se tracent à partir de deux jours de suivi.
+
 ## Les fichiers
 
 | Fichier | Rôle |

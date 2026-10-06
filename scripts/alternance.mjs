@@ -863,6 +863,101 @@ function titresFrequents(liste) {
 /* ============================================================
    8) LA CHAÎNE
    ============================================================ */
+/* ============================================================
+   ARCHIVE : on ne perd aucune offre, même quand elle n'est plus en ligne
+   data/alternance.json est réécrit chaque matin avec les seules offres actives. L'archive garde, à côté :
+     data/historique/offres/<mois>.jsonl une ligne par version d'offre (écrite la 1re fois qu'on la voit, et si son contenu change)
+     data/historique/index.json          par offre : première vue, dernière vue, nombre de jours vue, empreinte
+     data/historique/presence/<date>.csv les offres vues ce jour-là (id, métier, contrat, département)
+     data/historique/jours.json          par jour : nombre d'offres par source (pour savoir si une source était en panne)
+     data/historique/stats.json / .js    par jour : les chiffres de la page « Évolution » (restent même quand le détail est archivé)
+   Une offre est « retirée » quand elle n'apparaît plus dans les fichiers de présence ; sa dernière vue date son retrait.
+   Relancer le même jour n'écrit rien deux fois, et une relance partielle (sans clés d'API) n'efface rien.
+   Les mois écoulés sont compressés dans les Releases GitHub par .github/workflows/archive-mensuel.yml (scripts/archiver-mois.mjs).
+   ============================================================ */
+function archiver(offres, signalees, jour, parSource) {
+  const dir = path.join(RACINE, "data", "historique");
+  fs.mkdirSync(path.join(dir, "presence"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "offres"), { recursive: true });
+  const fIndex = path.join(dir, "index.json"), fOffres = path.join(dir, "offres", jour.slice(0, 7) + ".jsonl"), fPres = path.join(dir, "presence", jour + ".csv");
+  const index = lireJson(fIndex, {});
+  const premierJour = !Object.keys(index).length;
+  // Veille précédente (dernier fichier de présence antérieur à ce jour) : sert à compter les offres retirées.
+  const precedent = fs.readdirSync(path.join(dir, "presence")).map(f => f.replace(".csv", "")).filter(d => d < jour).sort().at(-1) || null;
+  const idsAvant = new Map();
+  if (precedent) for (const l of fs.readFileSync(path.join(dir, "presence", precedent + ".csv"), "utf8").split("\n").slice(1)) { const id = l.split(",")[0]; if (id) idsAvant.set(id, l); }
+  // Champs qui changent sans que l'annonce change (date d'observation, fusion avec une copie vue ailleurs).
+  const VOLATILS = new Set(["vu_le", "maj", "srcs", "annonces", "alertes"]);
+  const empreinte = o => sha(JSON.stringify(o, (k, v) => VOLATILS.has(k) ? undefined : v));
+  const lignes = [];
+  let nouvelles = 0, modifiees = 0;
+  const tout = [...offres.map(o => [o, 0]), ...signalees.map(o => [o, 1])];
+  const vues = new Map();
+  // Présence déjà écrite aujourd'hui (autre lancement) : on la garde, on ajoute.
+  if (fs.existsSync(fPres)) for (const l of fs.readFileSync(fPres, "utf8").split("\n").slice(1)) { const c = l.split(","); if (c[0]) vues.set(c[0], l); }
+  for (const [o, sig] of tout) {
+    const h = empreinte(o), e = index[o.id];
+    if (!e) { index[o.id] = [jour, jour, 1, h]; nouvelles++; lignes.push({ id: o.id, h, vu_le: jour, offre: o }); }
+    else {
+      if (e[1] !== jour) { e[1] = jour; e[2]++; }
+      if (e[3] !== h) { e[3] = h; modifiees++; lignes.push({ id: o.id, h, vu_le: jour, offre: o }); }
+    }
+    vues.set(o.id, [o.id, o.rome || "", o.contrat || "", o.dep || "", sig].join(","));
+  }
+  if (lignes.length) fs.appendFileSync(fOffres, lignes.map(l => JSON.stringify(l)).join("\n") + "\n", "utf8");
+  ecrireJson(fIndex, index);
+  fs.writeFileSync(fPres, "id,rome,contrat,dep,signalee\n" + [...vues.values()].join("\n") + "\n", "utf8");
+  const fJours = path.join(dir, "jours.json");
+  const jours = lireJson(fJours, []);
+  const avant = jours.find(j => j.date === jour);
+  const entree = avant || { date: jour, par_source: {} };
+  // Deux lancements le même jour : pour chaque source on garde le meilleur des deux.
+  for (const [s, n] of Object.entries(parSource || {})) entree.par_source[s] = Math.max(entree.par_source[s] || 0, n);
+  entree.offres_vues = vues.size;
+  if (!avant) jours.push(entree);
+  ecrireJson(fJours, jours);
+
+  /* ---- Les statistiques du jour (page Évolution) ---- */
+  const mediane = a => { const t = a.filter(x => x != null && isFinite(x)).sort((x, y) => x - y); if (!t.length) return null; const m = (t.length - 1) / 2; return Math.round((t[Math.floor(m)] + t[Math.ceil(m)]) / 2); };
+  const compte = (liste, cle) => liste.reduce((a, o) => { const k = cle(o); if (k) a[k] = (a[k] || 0) + 1; return a; }, {});
+  const hors = offres.filter(o => !o.ecole);                       // comme sur le site : les offres d'écoles sont mises à part
+  const parContrat = c => hors.filter(o => o.contrat === c);
+  const salaires = c => mediane(parContrat(c).filter(o => o.sal_etat === "ok" && o.smin != null && !o.sal_bareme).map(o => o.smin));
+  const nSal = c => parContrat(c).filter(o => o.sal_etat === "ok" && o.smin != null && !o.sal_bareme).length;
+  // Retirées : offres de la veille absentes ce matin, comptées seulement pour les sources qui ont répondu normalement
+  // (une API en panne ne doit pas faire croire à des milliers de retraits).
+  const avantJ = jours.filter(j => j.date < jour).sort((a, b) => a.date < b.date ? -1 : 1).at(-1);
+  const sourceOk = s => !avantJ || !avantJ.par_source[s] || (entree.par_source[s] || 0) >= 0.5 * avantJ.par_source[s];
+  const sourcesKo = Object.keys(avantJ ? avantJ.par_source : {}).filter(s => !sourceOk(s));
+  let retirees = null, dureesVie = [];
+  if (precedent) {
+    retirees = 0;
+    for (const [id] of idsAvant) {
+      if (vues.has(id) || sourcesKo.some(s => id.startsWith(s + "-"))) continue;
+      retirees++;
+      const e = index[id]; if (e) dureesVie.push((Date.parse(e[1]) - Date.parse(e[0])) / 86400000 + 1);
+    }
+  }
+  const stat = {
+    date: jour, total: hors.length, alternance: parContrat("alternance").length, stage: parContrat("stage").length, ecoles: offres.length - hors.length,
+    nouvelles: premierJour ? null : nouvelles, retirees, depuis: precedent, sources_ko: sourcesKo, duree_vie_med: mediane(dureesVie),
+    par_source: { ...entree.par_source },
+    par_rome: Object.fromEntries(Object.entries(compte(hors, o => o.rome)).map(([r]) => [r, [hors.filter(o => o.rome === r && o.contrat === "alternance").length, hors.filter(o => o.rome === r && o.contrat === "stage").length]])),
+    par_region: compte(hors, o => o.reg),
+    sal_med_alternance: salaires("alternance"), sal_n_alternance: nSal("alternance"), sal_med_stage: salaires("stage"), sal_n_stage: nSal("stage"),
+  };
+  const fStats = path.join(dir, "stats.json");
+  const stats = lireJson(fStats, { jours: [] });
+  const ancien = stats.jours.find(s => s.date === jour);
+  // Deux lancements le même jour : on garde le plus complet (un lancement sans clés d'API voit moins d'offres).
+  if (!ancien || stat.total >= ancien.total) stats.jours = [...stats.jours.filter(s => s.date !== jour), stat].sort((a, b) => a.date < b.date ? -1 : 1);
+  const jsonStats = JSON.stringify(stats);
+  fs.writeFileSync(fStats, jsonStats, "utf8");
+  fs.writeFileSync(path.join(dir, "stats.js"), "/* généré par scripts/alternance.mjs — ne pas modifier à la main */\nwindow.EVOLUTION = " + jsonStats + ";\n", "utf8");
+  console.log(`Archive : ${nouvelles} nouvelles, ${modifiees} modifiées, ${retirees == null ? "retraits non mesurables (premier jour)" : retirees + " retirées depuis le " + precedent}, ${vues.size} vues ce jour, ${Object.keys(index).length} offres gardées au total (data/historique/)`
+    + (sourcesKo.length ? ` — source(s) très en baisse, retraits non comptés : ${sourcesKo.join(", ")}` : ""));
+}
+
 async function main() {
   const t0 = Date.now();
   const journal = [];
@@ -997,6 +1092,7 @@ async function main() {
   const entete = "/* généré par scripts/alternance.mjs — ne pas modifier à la main */\n";
   fs.writeFileSync(path.join(RACINE, "data", "alternance.json"), json, "utf8");
   fs.writeFileSync(path.join(RACINE, "data", "alternance.js"), entete + "window.ALTERNANCE = " + json + ";\n", "utf8");
+  archiver(offres, signalees, jourRef, parSource);
   // Les entreprises « susceptibles de recruter » (La bonne alternance) : fichier à part, chargé par la page Alternance seulement.
   // Sans clé LBA, on garde celles du dernier lancement qui en avait une, plutôt que d'effacer la liste.
   const fRec = path.join(RACINE, "data", "alternance-recruteurs.json");

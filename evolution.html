@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Évolution — alternance et stages en marketing, digital et communication</title>
+<meta name="description" content="Comment évoluent les offres d'alternance et de stage jour après jour : volume, nouvelles offres, offres retirées, durée de vie, salaire affiché, comparaison entre deux dates.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Alternance et stages en marketing — l'évolution">
+<meta property="og:locale" content="fr_FR">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f5eff'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="assets/site.css?v=3">
+</head>
+<body>
+<div id="entete"></div>
+
+<main class="page">
+  <section class="hero">
+    <p class="surtitre">Évolution</p>
+    <h1>Comment le marché bouge, jour après jour</h1>
+    <p class="chapo" id="e-chapo"></p>
+  </section>
+
+  <div id="e-avis"></div>
+  <div class="chiffres" id="e-chiffres" style="margin-top:20px"></div>
+
+  <section class="section">
+    <div class="section-tete"><span class="num">1</span><h2>Combien d'offres sont en ligne ?</h2>
+      <p>Offres d'alternance et de stage actives chaque matin, toutes sources réunies, offres d'écoles retirées. Une offre vue dans plusieurs sources ne compte qu'une fois.</p></div>
+    <div class="carte"><div class="zone"><canvas id="g-total"></canvas></div></div>
+  </section>
+
+  <section class="section">
+    <div class="section-tete"><span class="num">2</span><h2>Combien arrivent, combien partent ?</h2>
+      <p>Nouvelles offres (jamais vues avant) et offres retirées (vues la veille, absentes ce matin). Une offre retirée est pourvue, expirée ou supprimée : on ne peut pas savoir laquelle. Un jour où une source était en panne n'est pas compté en retraits.</p></div>
+    <div class="grille">
+      <div class="carte"><h3>Nouvelles et retirées par jour</h3><div class="zone"><canvas id="g-flux"></canvas></div></div>
+      <div class="carte"><h3>Durée de vie des offres retirées <small>(médiane, en jours)</small></h3><div class="zone"><canvas id="g-vie"></canvas></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-tete"><span class="num">3</span><h2>Par métier, depuis le début du suivi</h2>
+      <p>Offres France Travail du métier choisi, chaque jour : toutes les offres, dont celles en alternance. C'est la série la plus longue : elle remonte au premier jour de la collecte.</p></div>
+    <div class="selection" style="position:static"><div class="selection-int" style="padding:0 0 12px">
+      <select class="champ" id="e-metier" aria-label="Métier"></select>
+    </div></div>
+    <div class="carte"><div class="zone"><canvas id="g-metier"></canvas></div></div>
+  </section>
+
+  <section class="section">
+    <div class="section-tete"><span class="num">4</span><h2>Comparer deux dates</h2>
+      <p>Offres par métier à deux dates au choix (alternance et stage, offres d'écoles retirées).</p></div>
+    <div class="selection" style="position:static"><div class="selection-int" style="padding:0 0 12px">
+      <label class="note">Du <select class="champ" id="e-date-a"></select></label>
+      <label class="note">au <select class="champ" id="e-date-b"></select></label>
+    </div></div>
+    <div class="carte"><div class="zone" style="height:460px"><canvas id="g-compare"></canvas></div></div>
+    <p class="note" id="e-compare-note"></p>
+  </section>
+
+  <section class="section">
+    <div class="section-tete"><span class="num">5</span><h2>Combien ça paie, et ça change ?</h2>
+      <p>Médiane du salaire minimum affiché, brut par mois, sur les offres qui donnent un salaire utilisable (le barème légal recopié et les montants invraisemblables sont écartés).</p></div>
+    <div class="carte"><div class="zone"><canvas id="g-salaire"></canvas></div></div>
+  </section>
+
+  <section class="section">
+    <div class="section-tete"><span class="num">6</span><h2>Où sont-elles ?</h2>
+      <p>Offres par région, première et dernière date du suivi.</p></div>
+    <div class="carte"><div class="zone" style="height:460px"><canvas id="g-region"></canvas></div></div>
+  </section>
+
+  <section class="section">
+    <div class="carte">
+      <h3>Comment lire ces courbes</h3>
+      <ul class="liste-simple">
+        <li><b>Le suivi complet commence le jour où l'archive a été activée</b> : avant, seule la série France Travail (partie 3) existe.</li>
+        <li><b>Une courbe qui monte n'est pas toujours un marché qui monte</b> : une source ajoutée, une panne d'API ou la saison (la rentrée, les rythmes d'alternance) changent les volumes. Les pannes sont signalées sous les chiffres-clés.</li>
+        <li><b>Les mois anciens</b> sont compressés dans les <a href="https://github.com/Pexi58/metier/releases" target="_blank" rel="noopener">Releases du dépôt</a> ; les courbes, elles, restent.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<div id="pied"></div>
+
+<style>
+  .section-tete .num { color:var(--accent); font-weight:700; font-size:.8rem; background:var(--accent-pale); border-radius:7px; padding:2px 8px; }
+  .liste-simple { margin:0; padding-left:20px; font-size:.93rem; } .liste-simple li { margin:5px 0; }
+  .grille { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(420px,100%), 1fr)); gap:16px; }
+  .avis { background:#fff8e6; border:1px solid #f4d58d; border-radius:12px; padding:12px 16px; font-size:.92rem; margin-top:16px; }
+  .chiffre small { display:block; color:var(--gris-clair); font-size:.78rem; margin-top:2px; }
+  .chiffre.hausse b { color:var(--vert); } .chiffre.baisse b { color:var(--rouge); }
+</style>
+<script src="data/alternance.js"></script>
+<script src="data/historique/stats.js"></script>
+<script src="assets/site.js?v=5"></script>
+<script src="assets/evolution.js?v=1"></script>
+</body>
+</html>

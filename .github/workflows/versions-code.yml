@@ -1,0 +1,44 @@
+# Les anciennes versions du code : à chaque modification du code (scripts, pages, styles, config, workflows),
+# GitHub garde une copie datée dans les Releases (« code-AAAA-MM-JJ-HHMM »), sans les données.
+# Pour revenir en arrière : onglet Releases -> télécharger l'archive de la version voulue.
+# (L'historique complet de chaque fichier reste aussi dans git : onglet Commits.)
+# Les commits des robots du matin ne touchent que data/ : ils ne déclenchent rien ici.
+name: versions-code
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "assets/**"
+      - "config/**"
+      - ".github/workflows/**"
+      - "*.html"
+      - "*.md"
+      - "*.cmd"
+      - "*.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Archiver le code (sans data/) et le publier dans une Release
+        run: |
+          set -e
+          tag="code-$(date -u +%Y-%m-%d-%H%M)"
+          git ls-files -z | grep -zv '^data/' | xargs -0 zip -q "$RUNNER_TEMP/$tag.zip"
+          message="$(git log -1 --pretty=%B)"
+          gh release create "$tag" "$RUNNER_TEMP/$tag.zip" \
+            --target "$GITHUB_SHA" --latest=false \
+            --title "Code du $(date -u +%d/%m/%Y) à $(date -u +%H:%M) UTC" \
+            --notes "Version du code (sans les données) enregistrée par le commit ${GITHUB_SHA::7}.
+
+          $message"

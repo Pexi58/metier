@@ -17,6 +17,7 @@ const Site = (() => {
     ["presentation.html", "Synthèse"],
     ["alternance.html", "Explorer les données"],
     ["offres.html", "Offres disponibles"],
+    ["evolution.html", "Évolution"],
     ["alternance.html#fiabilite", "Méthode et sources"],
     ["marche.html", "Tout le marché (emplois)"],
   ];
