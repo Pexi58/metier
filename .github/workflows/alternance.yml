@@ -12,6 +12,11 @@ on:
 permissions:
   contents: write
 
+# veille et alternance enregistrent dans le même dépôt : l'une attend que l'autre ait fini.
+concurrency:
+  group: donnees-du-depot
+  cancel-in-progress: false
+
 jobs:
   alternance:
     runs-on: ubuntu-latest

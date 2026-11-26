@@ -59,10 +59,37 @@ METIERS = {
     "E1107": ("Chef(fe) de projet événementiel", "Communication et commerce", False),
     "E1404": ("Assistant(e) en publicité", "Communication et commerce", False),
     "D1510": ("Responsable / chef de secteur GMS", "Communication et commerce", False),
+    # Ajoutés le 26/11/2026 pour la page « Six métiers à la loupe » (metiers-cibles.html) :
+    # les « chefs de secteur GMS » sont classés aussi en D1517, les « chargés de clientèle » en D1415.
+    "D1517": ("Chef(fe) de secteur distribution", "Communication et commerce", False),
+    "D1415": ("Chargé(e) de clientèle / relation client", "Communication et commerce", False),
 }
 
 TOKEN_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire"
 SEARCH_URL = "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search"
+
+# Réponses de l'API qui méritent un nouvel essai : trop d'appels (429) ou serveur indisponible (5xx).
+A_RETENTER = {429, 500, 502, 503, 504}
+
+
+def demander(methode, url, **kw):
+    """Un appel HTTP avec jusqu'à 5 nouveaux essais (3, 6, 12, 24, 48 s d'attente) : une panne
+    passagère de l'API ne doit plus faire échouer toute la collecte du matin (cas du 20/11/2026)."""
+    derniere = None
+    for essai in range(6):
+        try:
+            r = requests.request(methode, url, timeout=30, **kw)
+            if r.status_code not in A_RETENTER:
+                return r
+            derniere = f"code {r.status_code}"
+            attente = int(r.headers["Retry-After"]) if r.headers.get("Retry-After", "").isdigit() else 3 * 2 ** essai
+        except requests.RequestException as e:
+            derniere, attente = f"réseau : {e.__class__.__name__}", 3 * 2 ** essai
+        if essai < 5:
+            print(f"    … {derniere}, nouvel essai dans {attente} s", flush=True)
+            time.sleep(min(attente, 60))
+    raise RuntimeError(f"API indisponible après 6 essais ({derniere})")
+
 
 # Champs qui bougent sans que l'offre change : ignorés pour décider si une offre a été modifiée.
 CHAMPS_VOLATILS = {"dateActualisation"}
@@ -72,12 +99,12 @@ def obtenir_token():
     cid, secret = os.getenv("FT_CLIENT_ID"), os.getenv("FT_CLIENT_SECRET")
     if not cid or not secret or cid.startswith("PAR_votre"):
         sys.exit("Identifiants absents : copiez .env.example en .env et remplissez-le.")
-    r = requests.post(TOKEN_URL, data={
+    r = demander("POST", TOKEN_URL, data={
         "grant_type": "client_credentials",
         "client_id": cid,
         "client_secret": secret,
         "scope": "api_offresdemploiv2 o2dsoffre",
-    }, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=30)
+    }, headers={"Content-Type": "application/x-www-form-urlencoded"})
     r.raise_for_status()
     return r.json()["access_token"]
 
@@ -87,8 +114,8 @@ def chercher(token, params, pas=150, maximum=1150):
     offres, total, debut = [], None, 0
     while debut < maximum:
         fin = min(debut + pas - 1, maximum - 1)
-        r = requests.get(SEARCH_URL, params=dict(params, range=f"{debut}-{fin}"),
-                         headers={"Authorization": f"Bearer {token}"}, timeout=30)
+        r = demander("GET", SEARCH_URL, params=dict(params, range=f"{debut}-{fin}"),
+                     headers={"Authorization": f"Bearer {token}"})
         if r.status_code == 204:                     # aucune offre
             break
         if r.status_code not in (200, 206):
@@ -144,9 +171,15 @@ def main():
     (RACINE / "data" / "brut" / mois).mkdir(parents=True, exist_ok=True)
     (RACINE / "data" / "actives").mkdir(parents=True, exist_ok=True)
 
-    actives, lignes_serie = [], []
+    actives, lignes_serie, echecs = [], [], []
     for code in codes:
-        offres, total = chercher(token, {"codeROME": code})
+        try:
+            offres, total = chercher(token, {"codeROME": code})
+        except RuntimeError as e:
+            # Un métier en panne n'arrête plus les autres : on garde ses offres de la veille.
+            print(f"{code}  ÉCHEC ({e}) — on garde ses offres de la dernière extraction")
+            echecs.append(code)
+            continue
         nouvelles = modifiees = 0
         with (RACINE / "data" / "brut" / mois / f"{code}.jsonl").open("a", encoding="utf-8") as brut:
             for o in offres:
@@ -168,6 +201,18 @@ def main():
 
     # Même logique pour les actives du jour : on remplace les codes relancés, on garde les autres.
     fichier_actives = RACINE / "data" / "actives" / f"{aujourdhui}.csv"
+    if echecs:
+        # Un métier en échec garde ses lignes du jour si une collecte précédente du jour a réussi,
+        # sinon on reprend celles de la dernière extraction (la page ne le montre pas vide).
+        deja = set()
+        if fichier_actives.exists():
+            with fichier_actives.open(encoding="utf-8") as f:
+                deja = {r[0] for r in list(csv.reader(f))[1:]}
+        precedents = sorted(f for f in (RACINE / "data" / "actives").glob("*.csv") if f.stem < aujourdhui)
+        if precedents:
+            with precedents[-1].open(encoding="utf-8") as f:
+                actives += [tuple(r) for r in list(csv.reader(f))[1:] if r[0] in echecs and r[0] not in deja]
+        codes = [c for c in codes if c not in echecs]
     if fichier_actives.exists():
         with fichier_actives.open(encoding="utf-8") as f:
             actives = [tuple(r) for r in list(csv.reader(f))[1:] if r[0] not in codes] + actives
@@ -190,6 +235,10 @@ def main():
 
     print(f"\n{aujourdhui} : {len(actives)} offres actives sur {len(codes)} métiers — "
           f"{sum(r[4] for r in lignes_serie)} nouvelles versions, {sum(r[5] for r in lignes_serie)} modifiées.")
+    if echecs:
+        print(f"Attention : {len(echecs)} métier(s) non mis à jour : {', '.join(echecs)}")
+        if not lignes_serie:
+            sys.exit("Aucun métier n'a pu être lu : l'API France Travail ne répond pas.")
 
 
 if __name__ == "__main__":

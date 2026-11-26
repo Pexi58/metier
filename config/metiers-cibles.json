@@ -1,0 +1,107 @@
+{
+  "_aide": [
+    "Les six métiers de la page « Six métiers à la loupe » (metiers-cibles.html), lus par scripts/metiers_cibles.py.",
+    "codes : les codes ROME du métier. Avec le réglage « toutes les offres du code », toutes leurs offres comptent.",
+    "voisins : d'autres codes suivis où France Travail range aussi ce métier ; leurs offres ne comptent que si l'intitulé correspond.",
+    "intitule : expressions cherchées dans l'intitulé de l'offre, en minuscules et sans accents ; TOUTES doivent être trouvées.",
+    "exclure (facultatif) : expressions qui écartent l'offre même si l'intitulé correspond.",
+    "Tous les codes doivent être dans METIERS (scripts/extraire.py), sinon leurs offres ne sont pas collectées.",
+    "Codes vérifiés le 26/11/2026 par une recherche par mots-clés dans l'API France Travail (code ROME des offres trouvées)."
+  ],
+  "metiers": [
+    {
+      "cle": "brand",
+      "libelle": "Brand manager / Brand content",
+      "codes": [
+        "E1127"
+      ],
+      "voisins": [
+        "M1705",
+        "M1716",
+        "M1711",
+        "M1703",
+        "E1112",
+        "E1103"
+      ],
+      "intitule": [
+        "\\bbrand\\b|\\bmarques?\\b|\\bcontent manager\\b"
+      ],
+      "regle": "l'intitulé contient « brand », « marque » ou « content manager », sauf « marque industrielle » ou « marque technique » (des postes d'ingénieur)",
+      "exclure": [
+        "marques? (industrielle|technique)"
+      ]
+    },
+    {
+      "cle": "produit",
+      "libelle": "Chef de produit",
+      "codes": [
+        "M1703"
+      ],
+      "voisins": [
+        "M1705",
+        "M1716"
+      ],
+      "intitule": [
+        "chef[\\w.()-]* (de )?(produit|gamme|marche|groupe)|product (marketing )?manager|head of product|chef[\\w.()-]* de projet produit|responsable (de )?(produit|gamme)|category manager|specialiste produit"
+      ],
+      "regle": "l'intitulé contient « chef de produit » (ou de gamme, de marché, de groupe), « product manager », « head of product », « responsable produit » ou « category manager »"
+    },
+    {
+      "cle": "clientele",
+      "libelle": "Chargé de clientèle",
+      "codes": [
+        "D1415"
+      ],
+      "voisins": [],
+      "intitule": [
+        "client|relations? (abonnes?|adherents?|usagers?)|customer (success|care|service)"
+      ],
+      "regle": "l'intitulé contient « client » (ou « clientèle »), « relation abonnés / adhérents / usagers » ou « customer success / care / service »"
+    },
+    {
+      "cle": "gms",
+      "libelle": "Responsable de secteur GMS",
+      "codes": [
+        "D1510",
+        "D1517"
+      ],
+      "voisins": [],
+      "intitule": [
+        "secteur|\\bgms\\b|grande distribution|grandes surfaces"
+      ],
+      "regle": "l'intitulé contient « secteur », « GMS » ou « grande distribution »"
+    },
+    {
+      "cle": "etudes",
+      "libelle": "Chargé d'études marketing",
+      "codes": [
+        "M1430"
+      ],
+      "voisins": [
+        "M1705",
+        "M1620",
+        "M1718",
+        "M1716"
+      ],
+      "intitule": [
+        "etude|analyst|research|insight|veille",
+        "marketing|commerci|client|consommat|qualitati|quantitati|statisti|sondage|enquete|opinion|insight|shopper|panel|market|etudes? de marche|satisfaction|concurren"
+      ],
+      "regle": "l'intitulé parle d'études, d'analyse ou d'insights ET de marketing, de clients, de consommateurs, de sondages ou de statistiques (exclut les « chargés d'études VRD » ou « électriques »)"
+    },
+    {
+      "cle": "communication",
+      "libelle": "Chargé de communication",
+      "codes": [
+        "E1112"
+      ],
+      "voisins": [
+        "E1103"
+      ],
+      "intitule": [
+        "communication|relations? (presse|publiques|medias)|attachee? de presse|\\brp\\b"
+      ],
+      "regle": "l'intitulé contient « communication », « relations presse », « attaché de presse » ou « relations publiques » (exclut les « chargés d'affaires » rangés dans ce code)"
+    }
+  ]
+}

@@ -6,18 +6,27 @@ name: veille
 on:
   schedule:
     - cron: "0 5 * * *"       # 5 h UTC = 7 h à Paris en été (6 h en hiver) ; GitHub ne connaît que l'UTC
+    - cron: "17 12 * * *"     # passage de secours à 12 h 17 UTC : rattrape un matin raté (relancer le même jour n'écrit rien deux fois)
   workflow_dispatch:          # et le bouton « Run workflow » pour lancer à la main
 
 permissions:
   contents: write             # le workflow doit pouvoir pousser son commit
 
+# veille et alternance enregistrent dans le même dépôt : l'une attend que l'autre ait fini.
+concurrency:
+  group: donnees-du-depot
+  cancel-in-progress: false
+
 jobs:
   extraire:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0       # tout l'historique : nécessaire pour « git pull --rebase » avant l'envoi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -30,6 +39,7 @@ jobs:
         run: |
           python scripts/extraire.py
           python scripts/resumer.py
+          python scripts/metiers_cibles.py
 
       - name: Enregistrer la donnée du jour (commit + push)
         run: |
@@ -37,4 +47,5 @@ jobs:
           git config user.email "actions@github.com"
           git add data
           git commit -m "veille : offres du $(date -u +%Y-%m-%d)" || echo "rien de nouveau"
+          git pull --rebase
           git push

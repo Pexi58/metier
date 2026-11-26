@@ -312,6 +312,7 @@ def main():
             "entreprise": (o.get("entreprise") or {}).get("nom"),
             "lieu": lieu.get("libelle"),
             "dep": departement(lieu),
+            "commune": lieu.get("commune") or None,   # code INSEE : sert aux ratios par ville (metiers_cibles.py)
             "lat": lat, "lon": lon, "prec": precision,
             "contrat": o.get("typeContrat"),
             "experience": o.get("experienceLibelle"),

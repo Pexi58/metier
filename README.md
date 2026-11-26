@@ -14,6 +14,7 @@ offres comptées s'affichent, avec un export CSV pour refaire le calcul dans Exc
 | [Explorer les données](https://pexi58.github.io/metier/alternance.html) | tous les filtres, la carte, les entreprises à démarcher, la fiabilité |
 | [Offres disponibles](https://pexi58.github.io/metier/offres.html) | les annonces en ligne ce matin, filtrables, exportables |
 | [Évolution](https://pexi58.github.io/metier/evolution.html) | le marché dans le temps : volume, nouvelles et retirées, durée de vie, comparaison de deux dates |
+| [Six métiers à la loupe](https://pexi58.github.io/metier/metiers-cibles.html) | brand manager, chef de produit, chargé de clientèle, chef de secteur GMS, chargé d'études marketing, chargé de communication : qui recrute, quels secteurs, classement des grandes villes, habitants par offre |
 | [Tout le marché](https://pexi58.github.io/metier/marche.html) | toutes les offres d'emploi (pas seulement l'alternance) : la base du cours |
 
 Le détail de la veille alternance (sources, nettoyage, contrôles) est dans [ALTERNANCE.md](ALTERNANCE.md).
@@ -59,7 +60,7 @@ Hauts-de-Seine en tête ; 27 % des offres affichent un salaire, médiane
 
 ## Les métiers suivis
 
-20 codes ROME, choisis pour le M2 MOD parmi les 1 911 du référentiel France
+22 codes ROME, choisis pour le M2 MOD parmi les 1 911 du référentiel France
 Travail (la liste vit dans `scripts/extraire.py`, `METIERS`, et dans
 `config/alternance.json` pour la veille alternance) : le cœur
 marketing (M1718 chargé de marketing digital, M1716, M1705, M1703, M1620,
@@ -67,7 +68,8 @@ M1430, M1711), le digital (E1113 e-commerce, D1438, E1101 community
 manager, E1124, E1405 SEO, M1886, M1426, E1127 brand manager / brand content)
 et, décochés par défaut, le groupe « Communication et commerce », métiers
 voisins du marketing (E1112, E1103, E1107, E1404, D1510 chef de secteur GMS).
-Retirés le 29/09/2026 : D1506 (merchandising), D1415 (relation client),
+D1415 (chargé de clientèle / relation client) et D1517 (chef de secteur distribution) ont été ajoutés le 26/11/2026
+pour la page « Six métiers à la loupe ». Retirés le 29/09/2026 : D1506 (merchandising), D1415 (relation client),
 M1706 (promotion des ventes), M1719 et E1406 (influence) ; leurs offres déjà
 collectées restent dans `data/brut/`.
 E1127 et D1510 ont été ajoutés le 29/09/2026 : les offres « brand manager »
@@ -82,8 +84,9 @@ API France Travail  →  scripts/extraire.py  →  data/brut/<mois>/<ROME>.jsonl
                                             →  data/actives/<date>.csv         les offres actives du jour (rome, id)
                                             →  data/serie.csv                  par jour et par métier : total, nouvelles, modifiées
                        scripts/resumer.py   →  data/resume.json                ce que les pages affichent (+ data/geo/, cache des positions)
+                       scripts/metiers_cibles.py → data/metiers-cibles.js    la page « Six métiers à la loupe » (règles : config/metiers-cibles.json)
                        marche.html + 4 pages →  https://pexi58.github.io/metier/marche.html
-                       .github/workflows/veille.yml : GitHub relance tout ça chaque matin à 7 h
+                       .github/workflows/veille.yml : GitHub relance tout ça chaque matin à 7 h (passage de secours à 13 h)
 ```
 
 - `scripts/extraire.py` — une requête `codeROME` par métier (token OAuth,

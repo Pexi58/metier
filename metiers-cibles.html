@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Six métiers à la loupe — qui recrute, où, dans quels secteurs</title>
+<meta name="description" content="Brand manager, chef de produit, chargé de clientèle, responsable de secteur GMS, chargé d'études marketing, chargé de communication : les entreprises et les secteurs qui recrutent, le classement des grandes villes et les ratios habitants par offre. Données France Travail mises à jour chaque matin.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f5eff'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3E6%3C/text%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="assets/commun.css?v=6">
+<style>
+  .retour { display:inline-flex; align-items:center; gap:8px; margin:0 0 14px; padding:8px 16px; border-radius:99px; background:var(--accent); color:#fff; font-weight:600; font-size:.95rem; }
+  .retour:hover { text-decoration:none; filter:brightness(1.1); }
+  .choix { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
+  .choix button { font:inherit; font-size:.92rem; padding:7px 14px; border:1px solid var(--trait); border-radius:99px; background:var(--carte); cursor:pointer; }
+  .choix button small { color:var(--gris); margin-left:4px; }
+  .choix button:hover { border-color:var(--accent); }
+  .choix button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .choix button[aria-pressed="true"] small { color:#dbe6ff; }
+  .reglages { display:flex; flex-wrap:wrap; gap:6px 24px; font-size:.92rem; }
+  .reglages label { display:flex; gap:8px; align-items:center; cursor:pointer; }
+  .reglages input { accent-color:var(--accent); }
+  .defile { overflow-x:auto; }
+  table.tab { width:100%; border-collapse:collapse; font-size:.9rem; min-width:720px; }
+  table.tab th, table.tab td { padding:7px 8px; border-bottom:1px solid var(--trait); text-align:left; vertical-align:top; }
+  table.tab th { font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; color:var(--gris); white-space:nowrap; }
+  table.tab th button { all:unset; cursor:pointer; }
+  table.tab th button:hover, table.tab th button:focus-visible { color:var(--accent); }
+  table.tab th[aria-sort] button::after { content:" ▾"; color:var(--accent); }
+  table.tab th[aria-sort="ascending"] button::after { content:" ▴"; }
+  table.tab td.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  table.tab th.n { text-align:right; }
+  table.tab tbody tr { cursor:pointer; }
+  table.tab tbody tr:hover { background:#f0f5ff; }
+  table.tab tbody tr.zero { color:var(--gris); }
+  .villes { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(250px,100%), 1fr)); gap:12px; }
+  .ville h3 { display:flex; justify-content:space-between; gap:8px; }
+  .ville h3 small { white-space:nowrap; }
+  .barre { all:unset; display:block; width:100%; cursor:pointer; margin:6px 0; font-size:.88rem; }
+  .barre span { display:flex; justify-content:space-between; gap:8px; }
+  .barre i { display:block; height:7px; border-radius:4px; background:var(--accent); margin-top:3px; }
+  .barre:hover span, .barre:focus-visible span { color:var(--accent); }
+  #detail { scroll-margin-top:12px; }
+  #detail .entete { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  #detail .entete button { font:inherit; font-size:.85rem; padding:5px 12px; border:1px solid var(--trait); border-radius:8px; background:var(--carte); cursor:pointer; }
+  #detail .entete button:hover { border-color:var(--accent); color:var(--accent); }
+  .methode li { margin:4px 0; }
+  .methode code { font-size:.85em; }
+</style>
+</head>
+<body>
+<main>
+  <a class="retour" href="index.html">← Retour à la page de base du site</a>
+  <nav class="nav" aria-label="Pages">
+    <a href="presentation.html">Synthèse alternance et stages</a>
+    <a href="marche.html">Tout le marché</a>
+    <a href="recruteurs.html">Qui recrute</a>
+    <a href="metiers-cibles.html" class="ici" aria-current="page">Six métiers à la loupe</a>
+  </nav>
+
+  <h1>Six métiers à la loupe</h1>
+  <p class="sous" id="sous">Chargement des données…</p>
+
+  <div class="carte">
+    <div class="choix" id="choix" role="group" aria-label="Métier analysé"></div>
+    <div class="reglages">
+      <label><input type="checkbox" id="r-intitule" checked> Seulement les offres dont l'intitulé correspond au métier <small class="note">(recommandé, voir la méthode)</small></label>
+      <label><input type="checkbox" id="r-intermediaires"> Masquer les agences d'intérim et de placement</label>
+    </div>
+    <p class="compte" id="compte"></p>
+  </div>
+
+  <div class="chiffres" style="margin-top:16px" id="chiffres"></div>
+
+  <h2>1. Quelle entreprise recrute le plus ? <small id="sous-ent"></small></h2>
+  <div class="carte">
+    <div class="zone"><canvas id="g-entreprises"></canvas></div>
+    <p class="note" id="note-ent"></p>
+  </div>
+
+  <h2>2. Quels secteurs embauchent le plus ? <small>— secteur d'activité de l'employeur (code NAF indiqué dans l'annonce)</small></h2>
+  <div class="carte">
+    <div class="zone"><canvas id="g-secteurs"></canvas></div>
+    <p class="note" id="note-sec"></p>
+  </div>
+
+  <h2>3. Le classement des plus grandes villes de France <small>— les 30 communes les plus peuplées, et leurs offres</small></h2>
+  <div class="carte">
+    <div class="defile"><table class="tab" id="t-villes"></table></div>
+    <p class="note">Cliquez sur un titre de colonne pour trier, sur une ligne pour voir les offres. Paris, Lyon et Marseille regroupent leurs arrondissements. Une offre ne compte pour une ville que si l'annonce donne cette commune : les offres situées en banlieue (La Défense, Villeurbanne…) comptent pour leur propre commune.</p>
+  </div>
+
+  <h2>4. Nombre d'habitants par offre : les ratios <small id="sous-ratio"></small></h2>
+  <div class="grille">
+    <div class="carte large">
+      <h3>Offres pour 100 000 habitants, dans les 30 plus grandes villes <small>— plus la barre est longue, moins il y a de concurrence locale par offre</small></h3>
+      <div class="zone geante"><canvas id="g-ratio"></canvas></div>
+      <p class="note" id="note-ratio"></p>
+    </div>
+    <details class="carte large">
+      <summary>Le même ratio pour chaque département (plus juste pour les métropoles et leur banlieue)</summary>
+      <div class="defile"><table class="tab" id="t-deps"></table></div>
+    </details>
+  </div>
+
+  <h2>5. Les secteurs qui recrutent le plus dans chaque grande ville <small>— les 3 premiers secteurs, dans les 12 villes les plus peuplées</small></h2>
+  <div class="villes" id="villes-secteurs"></div>
+
+  <h2 id="titre-detail">Les offres comptées</h2>
+  <div class="carte" id="detail">
+    <p class="note">Cliquez sur une barre, une ligne de tableau ou un secteur : les offres comptées s'affichent ici, avec le lien vers chaque annonce.</p>
+  </div>
+
+  <h2 id="methode">Méthode et limites</h2>
+  <div class="carte methode" id="t-methode"></div>
+
+  <footer>
+    <p style="margin:0 0 8px"><a href="index.html">← Retour à la page de base du site</a> · <a href="marche.html">Tout le marché de l'emploi</a> · <a href="https://github.com/Pexi58/metier">Le dépôt GitHub</a></p>
+    Chaîne : API France Travail → <code>scripts/extraire.py</code> → <code>scripts/resumer.py</code> → <code>scripts/metiers_cibles.py</code> (règles dans <code>config/metiers-cibles.json</code>) → <code>data/metiers-cibles.js</code> → cette page. Une Action GitHub relance la collecte chaque matin.
+  </footer>
+</main>
+
+<script src="assets/commun.js?v=6"></script>
+<script src="data/metiers-cibles.js"></script>
+<script src="assets/metiers-cibles.js?v=2"></script>
+</body>
+</html>

@@ -19,6 +19,7 @@ const Site = (() => {
     ["offres.html", "Offres disponibles"],
     ["evolution.html", "Évolution"],
     ["alternance.html#fiabilite", "Méthode et sources"],
+    ["metiers-cibles.html", "Six métiers à la loupe"],
     ["marche.html", "Tout le marché (emplois)"],
   ];
   const ici = location.pathname.split("/").pop() || "presentation.html";
