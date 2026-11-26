@@ -167,6 +167,24 @@ def formation(o):
     return meilleur
 
 
+# Niveau d'études cité dans le texte de l'annonce, quand le champ « formations » est vide (88 % des offres) :
+# le plus élevé des niveaux cités, comme pour le champ. Ordre : du plus haut au plus bas.
+ETUDES_TEXTE = [
+    ("Bac+5", re.compile(r"bac\s*\+\s*5|bac\s*\+\s*[234]\s*(?:/|à|a|-|ou)\s*(?:bac\s*\+\s*)?5|\bmaster\b|\bmba\b|\bmsc\b|grandes? [ée]coles?|[ée]cole de commerce|[ée]cole d'ing[ée]nieurs?|dipl[ôo]me d'ing[ée]nieur")),
+    ("Bac+3/4", re.compile(r"bac\s*\+\s*[34]|bac\s*\+\s*2\s*(?:/|à|a|-|ou)\s*(?:bac\s*\+\s*)?[34]|\blicence\b(?! (?:de |d')?(?:transport|logiciel|iv|4|iii|3))|\bbachelor\b|\bbut (?:gea|tc|mmi|info|techniques)")),
+    ("Bac+2", re.compile(r"bac\s*\+\s*2|\bbts\b|\bdut\b|\bdeust\b")),
+    ("Bac", re.compile(r"\bbac\b(?!\s*\+)|baccalaur[ée]at")),
+]
+
+
+def etudes_texte(t):
+    """'... de formation Bac+3 minimum, idéalement master ...' -> 'Bac+5' (le plus élevé cité), sinon None."""
+    for niveau_etudes, rx in ETUDES_TEXTE:
+        if rx.search(t):
+            return niveau_etudes
+    return None
+
+
 def temps_travail(o):
     """'Temps plein' -> 'plein', 'Temps partiel' -> 'partiel', sinon None."""
     l = (o.get("dureeTravailLibelleConverti") or "").lower()
@@ -331,6 +349,9 @@ def main():
             "exp_ans": exp_ans(o.get("experienceLibelle")),
             "qualification": o.get("qualificationLibelle") or None,
             "formation": formation(o),
+            # Niveau d'études : le champ de l'offre s'il est rempli, sinon le texte de l'annonce (etudes_src le dit).
+            "etudes": formation(o) or etudes_texte(t),
+            "etudes_src": "champ" if formation(o) else ("texte" if etudes_texte(t) else None),
             "secteur": o.get("secteurActiviteLibelle") or None,
             "temps": temps_travail(o),
             "postes": int(o.get("nombrePostes") or 1),

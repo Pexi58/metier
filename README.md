@@ -16,6 +16,7 @@ offres comptées s'affichent, avec un export CSV pour refaire le calcul dans Exc
 | [Offres disponibles](https://pexi58.github.io/metier/offres.html) | les annonces en ligne ce matin, filtrables, exportables |
 | [Évolution](https://pexi58.github.io/metier/evolution.html) | le marché dans le temps : volume, nouvelles et retirées, durée de vie, comparaison de deux dates |
 | [Six métiers à la loupe](https://pexi58.github.io/metier/metiers-cibles.html) | brand manager, chef de produit, chargé de clientèle, chef de secteur GMS, chargé d'études marketing, chargé de communication : qui recrute, quels secteurs, classement des grandes villes, habitants par offre |
+| [Analyse croisée](https://pexi58.github.io/metier/croisements.html) | Six métiers : lieu × expérience, lieu × études, études × expérience, métier × expérience, et en plus métier × études, métier × contrat, lieu × contrat, salaire selon l'expérience et le lieu ; khi-deux (ou Kruskal-Wallis) pour chacun |
 | [Tout le marché](https://pexi58.github.io/metier/marche.html) | toutes les offres d'emploi (pas seulement l'alternance) : la base du cours |
 
 Le détail de la veille alternance (sources, nettoyage, contrôles) est dans [ALTERNANCE.md](ALTERNANCE.md).

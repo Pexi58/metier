@@ -36,7 +36,8 @@ const Navigation = (() => {
       ] },
     { id: "six", titre: "Six métiers à la loupe", court: "6 métiers", url: "metiers-cibles.html",
       dit: "Brand manager, chef de produit, chargé de clientèle, chef de secteur GMS, chargé d'études marketing, chargé de communication.",
-      pages: [["metiers-cibles.html", "Entreprises, secteurs, grandes villes, ratios", "Qui recrute, où, et combien d'habitants par offre."]] },
+      pages: [["metiers-cibles.html", "Entreprises et villes", "Qui recrute, le classement des villes, combien d'habitants par offre."],
+              ["croisements.html", "Analyse croisée", "Lieu, expérience, études, métier, contrat, salaire : ce qui va avec quoi, test du khi-deux à l'appui."]] },
   ];
 
   const fichier = (location.pathname.split("/").pop() || "index.html");

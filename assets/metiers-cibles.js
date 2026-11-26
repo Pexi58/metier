@@ -61,7 +61,6 @@
     document.getElementById("fenetre-liste").innerHTML = tri.length ? tri.map(o => `<div class="item">
         <div class="titre">${o.url ? `<a href="${echap(o.url)}" target="_blank" rel="noopener">${echap(o.intitule)}</a>` : echap(o.intitule)}</div>
         <div class="meta"><span>${echap(o.entreprise || "employeur non précisé")}</span><span>·</span><span>${echap(o.lieu || "lieu non précisé")}</span>
-          <span>·</span><span>${echap(secteurCourt(o.secteur) || "secteur non précisé")}</span>
           <span>·</span><span>${echap(o.alternance ? "Alternance" : libContrat(o.contrat))}</span>
           <span>·</span><span>publiée le ${dateFr(o.date)}</span></div></div>`).join("")
       : `<p class="note">Aucune offre.</p>`;
@@ -160,24 +159,15 @@
       `Noms mis en majuscules pour regrouper les variantes. ${pluriel(n - nommees.length, "offre")} sur ${nb(n)} ne donnent pas le nom de l'employeur et ne peuvent pas compter ici. `
       + (inter && !etat.inter ? `${pluriel(inter, "offre")} viennent d'agences d'intérim ou de placement, qui recrutent pour d'autres entreprises : cochez « Masquer les agences » en haut pour les retirer.` : "");
 
-    /* ---- 2. Secteurs ---- */
-    const avecSecteur = offres.filter(o => o.secteur);
-    const sec = compter(avecSecteur, o => secteurCourt(o.secteur)).slice(0, 12);
-    barresCliquables("g-secteurs", sec.map(([s, v]) => ({ label: s, valeur: v, bulle: `${pluriel(v, "offre")}, ${pct(v, avecSecteur.length)} % des offres qui donnent leur secteur` })),
-      l => montrer("Secteur : " + l.label, avecSecteur.filter(o => secteurCourt(o.secteur) === l.label), `${pluriel(l.valeur, "offre")} sur les ${nb(avecSecteur.length)} qui donnent leur secteur, soit ${pct(l.valeur, avecSecteur.length)} %`));
-    document.getElementById("note-sec").textContent =
-      `${nb(avecSecteur.length)} offres sur ${nb(n)} (${pct(avecSecteur.length, n)} %) indiquent le secteur de l'employeur : les pourcentages sont calculés sur elles.`;
-
-    /* ---- 3. Villes qui ont au moins une offre, de la plus peuplée à la moins peuplée ---- */
+    /* ---- 2. Villes qui ont au moins une offre, de la plus peuplée à la moins peuplée ---- */
     const parVille = new Map();
     for (const o of localisees) { if (!parVille.has(o.ville)) parVille.set(o.ville, []); parVille.get(o.ville).push(o); }
     const villes = [...parVille].map(([code, lot]) => {
       const [nom, pop, dep, rang] = infoVille(code);
-      const s1 = compter(lot.filter(o => o.secteur), o => secteurCourt(o.secteur))[0];
       const e1 = compter(lot.filter(o => o.entreprise), o => o.entreprise.trim().toUpperCase())[0];
       return { code, ville: nom, dep, pop, rang, offres: lot.length,
                pour100k: pop ? lot.length / pop * 100000 : null, habParOffre: pop ? pop / lot.length : null,
-               secteur: s1 ? `${s1[0]} (${s1[1]})` : "—", entreprise: e1 ? `${e1[0]} (${e1[1]})` : "—", lot };
+               entreprise: e1 ? `${e1[0]} (${e1[1]})` : "—", lot };
     }).filter(l => l.pop).sort((a, b) => a.rang - b.rang);
     villes.forEach((l, i) => { l.place = i + 1; });
     document.getElementById("sous-villes").textContent = villes.length
@@ -190,7 +180,6 @@
       ["offres", "Offres", true, l => nb(l.offres)],
       ["pour100k", "Offres pour 100 000 hab.", true, l => dec(l.pour100k)],
       ["habParOffre", "Habitants par offre", true, l => nb(l.habParOffre)],
-      ["secteur", "Secteur n° 1", false],
       ["entreprise", "Entreprise n° 1", false],
     ], villes, "villes", l => montrer(`${l.ville} (${nb(l.pop)} habitants)`, l.lot, calculVille(l)),
       etat.toutesVilles ? 0 : VILLES_AFFICHEES);
@@ -199,7 +188,7 @@
     const bPlus = document.getElementById("b-plus-villes");
     if (bPlus) bPlus.addEventListener("click", () => { etat.toutesVilles = !etat.toutesVilles; rendre(); });
 
-    /* ---- 4. Ratios : les 30 plus grandes villes qui ont au moins une offre ---- */
+    /* ---- 3. Ratios : les 30 plus grandes villes qui ont au moins une offre ---- */
     const grandes = villes.slice(0, 30);
     const ratio = [...grandes].sort((a, b) => b.pour100k - a.pour100k);
     barresCliquables("g-ratio", ratio.map(l => ({ label: `${l.ville} (${l.offres})`, valeur: Math.round(l.pour100k * 10) / 10,
@@ -217,9 +206,9 @@
     for (const o of offres) if (o.dep) { if (!parDep.has(o.dep)) parDep.set(o.dep, []); parDep.get(o.dep).push(o); }
     const lignesDeps = Object.entries(MC.departements).map(([code, [nom, pop]]) => {
       const lot = parDep.get(code) || [];
-      const s1 = compter(lot.filter(o => o.secteur), o => secteurCourt(o.secteur))[0];
+      const e1 = compter(lot.filter(o => o.entreprise), o => o.entreprise.trim().toUpperCase())[0];
       return { code, nom, pop, offres: lot.length, ratio: pop ? lot.length / pop * 100000 : null, habParOffre: lot.length ? pop / lot.length : null,
-               secteur: s1 ? `${s1[0]} (${s1[1]})` : "—", lot };
+               entreprise: e1 ? `${e1[0]} (${e1[1]})` : "—", lot };
     }).filter(l => l.offres);
     tableau("t-deps", [
       ["code", "Code", false],
@@ -228,26 +217,10 @@
       ["offres", "Offres", true, l => nb(l.offres)],
       ["ratio", "Offres pour 100 000 hab.", true, l => dec(l.ratio)],
       ["habParOffre", "Habitants par offre", true, l => nb(l.habParOffre)],
-      ["secteur", "Secteur n° 1", false],
+      ["entreprise", "Entreprise n° 1", false],
     ], lignesDeps, "deps", l => montrer(`${l.nom} (${l.code})`, l.lot,
       `${pluriel(l.offres, "offre")} ÷ ${nb(l.pop)} habitants × 100 000 = ${dec(l.ratio)} offres pour 100 000 habitants`));
 
-    /* ---- 5. Secteurs par grande ville ---- */
-    document.getElementById("villes-secteurs").innerHTML = villes.slice(0, 12).map(l => {
-      const avec = l.lot.filter(o => o.secteur);
-      const top = compter(avec, o => secteurCourt(o.secteur)).slice(0, 3);
-      const max = top.length ? top[0][1] : 1;
-      return `<div class="carte ville"><h3>${l.place}. ${echap(l.ville)} <small>${pluriel(l.offres, "offre")}</small></h3>
-        ${top.length ? top.map(([s, v]) => `<button type="button" class="barre" data-v="${l.code}" data-s="${echap(s)}">
-          <span><span>${echap(s)}</span><b>${v}</b></span><i style="width:${Math.max(4, 100 * v / max)}%"></i></button>`).join("")
-          + (avec.length < l.offres ? `<p class="note" style="margin:6px 0 0">${pluriel(l.offres - avec.length, "offre")} sans secteur indiqué</p>` : "")
-          : `<p class="note">Aucune offre n'indique son secteur.</p>`}</div>`;
-    }).join("") || `<p class="note">Aucune ville pour cette sélection.</p>`;
-    document.querySelectorAll("#villes-secteurs .barre").forEach(b => b.addEventListener("click", () => {
-      const l = villes.find(x => x.code === b.dataset.v), s = b.dataset.s;
-      const lot = l.lot.filter(o => secteurCourt(o.secteur) === s);
-      montrer(`${l.ville} — ${s}`, lot, `${pluriel(lot.length, "offre")} sur les ${l.offres} de ${l.ville}`);
-    }));
   }
 
   function poserMethode() {
@@ -266,7 +239,6 @@
         <li>Une photo du jour : seules les offres encore en ligne ce matin comptent. Une offre peut proposer plusieurs postes ; elle compte pour une.</li>
         <li>Une offre peut appartenir à deux métiers (un « brand manager » rangé chez les chefs de produit) ; dans « Les six ensemble », elle ne compte qu'une fois.</li>
         <li>« Entreprise » est le nom affiché dans l'annonce : une agence d'intérim ou un cabinet de recrutement peut publier pour un client. La case « Masquer les agences » retire celles dont le secteur est l'intérim ou le placement.</li>
-        <li>Le secteur est celui de l'employeur (code NAF), pas celui du poste : un chef de produit d'une entreprise de logiciels compte en « Programmation informatique ».</li>
         <li>Ratios par ville : la population est celle de la commune seule. Les offres de banlieue comptent pour leur commune ; le tableau par département donne une image plus juste des grandes agglomérations.</li>
         <li>« Responsable de secteur GMS » : France Travail mélange dans les codes D1510 et D1517 les chefs de secteur des marques (qui visitent les magasins) et ceux des magasins eux-mêmes. « Chargé de clientèle » : le code D1415 (relation client) ; les chargés de clientèle des banques et des assurances sont rangés dans d'autres codes, non suivis ici.</li>
         <li>Pas d'autre source que France Travail sur cette page : LinkedIn, Indeed ou HelloWork interdisent la collecte automatique.</li>

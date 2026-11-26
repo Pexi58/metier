@@ -47,12 +47,13 @@ def population():
     if POPULATION.exists():
         p = json.loads(POPULATION.read_text(encoding="utf-8"))
         # Le cache doit contenir toutes les communes (rang en France) : les anciens caches partiels sont refaits.
-        if p.get("toutes") and (date.today() - datetime.strptime(p["lu_le"], "%Y-%m-%d").date()).days <= 180:
+        if p.get("toutes") and p.get("regions") and (date.today() - datetime.strptime(p["lu_le"], "%Y-%m-%d").date()).days <= 180:
             return p
     try:
         communes = requests.get(f"{GEO}/communes", params={
             "fields": "nom,code,population,codeDepartement", "format": "json"}, timeout=120).json()
         deps = requests.get(f"{GEO}/departements", timeout=30).json()
+        regions = requests.get(f"{GEO}/regions", timeout=30).json()
     except (requests.RequestException, ValueError) as e:
         if POPULATION.exists():
             print(f"geo.api.gouv.fr indisponible ({e.__class__.__name__}) : on garde l'ancien cache")
@@ -69,7 +70,8 @@ def population():
         "source": "INSEE, population municipale, via geo.api.gouv.fr (API Découpage administratif)",
         "communes": {c["code"]: [c["nom"], c.get("population") or 0, c.get("codeDepartement"), rang]
                      for rang, c in enumerate(classees, start=1)},
-        "departements": {d["code"]: [d["nom"], pop_dep.get(d["code"], 0)] for d in deps},
+        "departements": {d["code"]: [d["nom"], pop_dep.get(d["code"], 0), d.get("codeRegion")] for d in deps},
+        "regions": {r["code"]: r["nom"] for r in regions},
     }
     POPULATION.parent.mkdir(parents=True, exist_ok=True)
     POPULATION.write_text(json.dumps(p, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -118,6 +120,10 @@ def main():
             "ville": v, "dep": o.get("dep") or None, "lieu": o.get("lieu"),
             "contrat": o.get("contrat"), "alternance": o.get("alternance"),
             "date": o.get("date"), "url": o.get("url"),
+            # Pour l'analyse croisée (croisements.html) : expérience, niveau d'études, salaire, niveau de poste.
+            "exp_exige": o.get("exp_exige"), "exp_ans": o.get("exp_ans"),
+            "etudes": o.get("etudes"), "etudes_src": o.get("etudes_src"),
+            "smin": o.get("smin"), "smax": o.get("smax"), "niveau": o.get("niveau"),
             "m": retenue,       # retenue pour ces métiers (code ou voisin, et intitulé conforme)
             "c": dans_code,     # dans le code ROME de ces métiers, quel que soit l'intitulé
         })
@@ -140,7 +146,8 @@ def main():
         "offres": offres,
         "villes": villes,                     # code INSEE -> [nom, population, département, rang en France]
         "grandes_villes": grandes,            # les plus peuplées de France, dans l'ordre
-        "departements": pop["departements"],  # code -> [nom, population]
+        "departements": pop["departements"],  # code -> [nom, population, code région]
+        "regions": pop["regions"],            # code -> nom
     }
     texte = json.dumps(sortie, ensure_ascii=False, separators=(",", ":"))
     (RACINE / "data" / "metiers-cibles.json").write_text(texte, encoding="utf-8")

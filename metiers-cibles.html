@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Six métiers à la loupe — qui recrute, où, dans quels secteurs</title>
-<meta name="description" content="Brand manager, chef de produit, chargé de clientèle, responsable de secteur GMS, chargé d'études marketing, chargé de communication : les entreprises et les secteurs qui recrutent, le classement des villes et les ratios habitants par offre. Données France Travail mises à jour chaque matin.">
+<title>Six métiers à la loupe — qui recrute, et dans quelles villes</title>
+<meta name="description" content="Brand manager, chef de produit, chargé de clientèle, responsable de secteur GMS, chargé d'études marketing, chargé de communication : les entreprises qui recrutent, le classement des villes et les ratios habitants par offre. Données France Travail mises à jour chaque matin.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f5eff'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="assets/commun.css?v=7">
-<link rel="stylesheet" href="assets/navigation.css?v=1">
-<script src="assets/navigation.js?v=1"></script>
+<link rel="stylesheet" href="assets/navigation.css?v=2">
+<script src="assets/navigation.js?v=2"></script>
 <style>
   .retour-accueil { font-size:.9rem; font-weight:500; }
   /* Barre de choix : reste sous la barre du site quand on descend */
@@ -55,15 +55,6 @@
   table.tab td .petit { color:var(--gris); font-size:.8rem; }
   .plus { margin-top:12px; font:inherit; font-size:.9rem; font-weight:600; padding:8px 14px; border:1px solid var(--trait); border-radius:10px; background:#fff; color:var(--accent); cursor:pointer; }
   .plus:hover { border-color:var(--accent); }
-  /* Cartes ville */
-  .villes { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(260px,100%), 1fr)); gap:12px; }
-  .ville h3 { display:flex; justify-content:space-between; gap:8px; align-items:baseline; }
-  .ville h3 small { white-space:nowrap; }
-  .barre { all:unset; box-sizing:border-box; display:block; width:100%; cursor:pointer; margin:7px 0; font-size:.88rem; border-radius:6px; }
-  .barre span { display:flex; justify-content:space-between; gap:8px; }
-  .barre i { display:block; height:7px; border-radius:4px; background:var(--accent); margin-top:3px; }
-  .barre:hover span, .barre:focus-visible span { color:var(--accent); }
-  .barre:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
   /* Fenêtre « les offres comptées » */
   dialog.fenetre { width:min(860px, calc(100vw - 24px)); max-height:min(86vh, 900px); padding:0; border:0; border-radius:16px; box-shadow:0 24px 60px rgba(16,24,40,.25); }
   dialog.fenetre::backdrop { background:rgba(16,24,40,.45); }
@@ -82,7 +73,7 @@
 <div id="entete"></div>
 <main>
   <p class="surtitre">Six métiers à la loupe · <a class="retour-accueil" href="index.html">← retour à l'accueil du site</a></p>
-  <h1>Qui recrute, dans quels secteurs, dans quelles villes ?</h1>
+  <h1>Qui recrute, et dans quelles villes ?</h1>
   <p class="sous" id="sous">Chargement des données…</p>
 
   <div class="selection">
@@ -95,8 +86,8 @@
   </div>
 
   <nav class="sur-page" aria-label="Sur cette page"><span>Sur cette page :</span>
-    <a href="#entreprises">1. Entreprises</a><a href="#secteurs">2. Secteurs</a><a href="#villes">3. Classement des villes</a>
-    <a href="#ratios">4. Habitants par offre</a><a href="#secteurs-villes">5. Secteurs par ville</a><a href="#methode">Méthode et limites</a></nav>
+    <a href="#entreprises">1. Entreprises</a><a href="#villes">2. Classement des villes</a>
+    <a href="#ratios">3. Habitants par offre</a><a href="croisements.html">Analyse croisée →</a><a href="#methode">Méthode et limites</a></nav>
 
   <div class="chiffres" style="margin-top:16px" id="chiffres"></div>
 
@@ -107,14 +98,7 @@
     <p class="astuce">Cliquez sur une barre pour voir les offres de l'entreprise.</p>
   </div>
 
-  <div class="section-tete" id="secteurs"><span class="num">2</span><h2>Quels secteurs embauchent le plus ?</h2><p>Le secteur d'activité de l'employeur, tel que l'annonce l'indique (code NAF).</p></div>
-  <div class="carte">
-    <div class="zone"><canvas id="g-secteurs"></canvas></div>
-    <p class="note" id="note-sec"></p>
-    <p class="astuce">Cliquez sur une barre pour voir les offres du secteur.</p>
-  </div>
-
-  <div class="section-tete" id="villes"><span class="num">3</span><h2>Le classement des plus grandes villes de France</h2><p id="sous-villes">Les villes qui ont au moins une offre, de la plus peuplée à la moins peuplée.</p></div>
+  <div class="section-tete" id="villes"><span class="num">2</span><h2>Le classement des plus grandes villes de France</h2><p id="sous-villes">Les villes qui ont au moins une offre, de la plus peuplée à la moins peuplée.</p></div>
   <div class="carte">
     <div class="defile"><table class="tab" id="t-villes"></table></div>
     <div id="plus-villes"></div>
@@ -122,7 +106,7 @@
     <p class="astuce">Cliquez sur un titre de colonne pour trier, sur une ligne pour voir les offres de la ville.</p>
   </div>
 
-  <div class="section-tete" id="ratios"><span class="num">4</span><h2>Combien d'habitants pour une offre ?</h2><p id="sous-ratio"></p></div>
+  <div class="section-tete" id="ratios"><span class="num">3</span><h2>Combien d'habitants pour une offre ?</h2><p id="sous-ratio"></p></div>
   <div class="grille">
     <div class="carte large">
       <h3>Offres pour 100 000 habitants, dans les 30 plus grandes villes qui ont au moins une offre <small>— plus la barre est longue, plus il y a d'offres pour la population</small></h3>
@@ -134,9 +118,6 @@
       <div class="defile"><table class="tab" id="t-deps"></table></div>
     </details>
   </div>
-
-  <div class="section-tete" id="secteurs-villes"><span class="num">5</span><h2>Les secteurs qui recrutent le plus dans chaque grande ville</h2><p>Les 3 premiers secteurs des 12 plus grandes villes qui ont au moins une offre.</p></div>
-  <div class="villes" id="villes-secteurs"></div>
 
   <div class="section-tete" id="methode"><h2>Méthode et limites</h2></div>
   <div class="carte methode" id="t-methode"></div>
@@ -156,6 +137,6 @@
 
 <script src="assets/commun.js?v=7"></script>
 <script src="data/metiers-cibles.js"></script>
-<script src="assets/metiers-cibles.js?v=3"></script>
+<script src="assets/metiers-cibles.js?v=4"></script>
 </body>
 </html>
