@@ -1,24 +1,29 @@
 /* ============================================================
-   commun.css — le style des cinq pages.
+   commun.css — le style des pages « Marché de l'emploi » et « Six métiers ».
+   Depuis le 26/11/2026, mêmes couleurs, police et cartes que site.css
+   (pages « Alternance & stages ») : tout le site a la même allure.
    Déplacé tel quel depuis l'ancien index.html, plus la barre de
    navigation, les liens-cartes de l'accueil et le panneau de
    filtres repliable.
    ============================================================ */
-:root { --encre:#1d1d1f; --gris:#6e6e73; --fond:#f5f5f7; --carte:#fff; --accent:#0a5cff; --trait:#e5e5ea; }
+:root { --encre:#16181d; --gris:#626773; --fond:#f4f6fa; --carte:#fff; --accent:#1f5eff; --accent-fonce:#1446c9; --accent-pale:#eaf0ff; --trait:#e4e7ee;
+  --rayon:14px; --ombre:0 1px 2px rgba(16,24,40,.04), 0 4px 16px rgba(16,24,40,.05); }
 * { box-sizing:border-box; }
-body { margin:0; font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--encre); background:var(--fond); }
-main { max-width:1120px; margin:0 auto; padding:32px 16px 64px; }
-h1 { font-size:1.9rem; margin:0 0 4px; }
+body { margin:0; font:15.5px/1.55 "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--encre); background:var(--fond); -webkit-font-smoothing:antialiased; }
+main { max-width:1240px; margin:0 auto; padding:28px 20px 40px; }
+h1, h2, h3 { letter-spacing:-.01em; }
+h1 { font-size:clamp(1.6rem, 3.2vw, 2.3rem); line-height:1.15; margin:0 0 8px; }
+.surtitre { color:var(--accent); font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; margin:0 0 6px; }
 h1 small { font-weight:400; color:var(--gris); font-size:.6em; }
-h2 { font-size:1.15rem; margin:40px 0 12px; }
+h2 { font-size:1.3rem; margin:44px 0 14px; }
 h2 small { font-weight:400; color:var(--gris); font-size:.85rem; }
-.sous { color:var(--gris); margin:0 0 20px; }
+.sous { color:var(--gris); margin:0 0 20px; font-size:1rem; max-width:860px; }
 .chiffres { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(240px,100%), 1fr)); gap:12px; }
-.chiffre { background:var(--carte); border:1px solid var(--trait); border-radius:12px; padding:14px 16px; }
+.chiffre { background:var(--carte); border:1px solid var(--trait); border-radius:var(--rayon); padding:16px 18px; box-shadow:var(--ombre); }
 .chiffre b { display:block; font-size:1.8rem; line-height:1.1; color:var(--accent); }
 .chiffre span { color:var(--gris); font-size:.85rem; }
 .grille { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(420px,100%), 1fr)); gap:16px; }
-.carte { background:var(--carte); border:1px solid var(--trait); border-radius:12px; padding:16px; }
+.carte { background:var(--carte); border:1px solid var(--trait); border-radius:var(--rayon); padding:18px; box-shadow:var(--ombre); }
 .carte h3 { margin:0 0 8px; font-size:1rem; }
 .carte h3 small { font-weight:400; color:var(--gris); }
 .large { grid-column:1 / -1; }
@@ -55,7 +60,7 @@ h2 small { font-weight:400; color:var(--gris); font-size:.85rem; }
 .phrase b { color:var(--accent); white-space:nowrap; }
 /* Liste compacte des dernières offres */
 .liste { display:grid; gap:8px; }
-.item { background:var(--carte); border:1px solid var(--trait); border-radius:12px; padding:10px 14px; }
+.item { background:var(--carte); border:1px solid var(--trait); border-radius:12px; padding:10px 14px; box-shadow:var(--ombre); }
 .item .titre { font-weight:600; }
 .item .meta { color:var(--gris); font-size:.88rem; margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .etiq { display:inline-block; font-size:.74rem; line-height:1.6; padding:0 9px; border-radius:99px; color:#fff; }
@@ -65,7 +70,7 @@ a:hover { text-decoration:underline; }
 .note { color:var(--gris); font-size:.9rem; }
 .leaflet-popup-content { font:13px/1.4 system-ui, sans-serif; margin:10px 12px; }
 .leaflet-popup-content b { display:block; font-size:14px; margin-bottom:2px; }
-footer { margin-top:48px; color:var(--gris); font-size:.85rem; border-top:1px solid var(--trait); padding-top:16px; }
+footer:not(.plan-site) { margin-top:48px; color:var(--gris); font-size:.85rem; border-top:1px solid var(--trait); padding-top:16px; }
 
 /* ---- Barre de navigation, commune aux cinq pages ---- */
 .nav { display:flex; gap:4px; flex-wrap:wrap; margin:0 0 18px; }
@@ -90,3 +95,16 @@ a.lien span i { font-style:normal; color:var(--accent); font-weight:600; }
 
 @media (max-width:880px) { .filtres { grid-template-columns:1fr; } }
 @media (max-width:480px) { main { padding:20px 12px 48px; } h1 { font-size:1.45rem; } #map { height:420px; } }
+
+/* ---- Filtres repliés : une ligne qui dit ce qui est sélectionné, un clic pour modifier ---- */
+details.filtres-repli > summary { display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-weight:500; }
+details.filtres-repli > summary::before { content:none; }
+.filtres-titre { font-weight:700; color:var(--encre); }
+#resume-filtres { color:var(--gris); font-size:.92rem; }
+.filtres-modifier { margin-left:auto; font-size:.88rem; font-weight:600; color:var(--accent); border:1px solid #cfdcff; background:var(--accent-pale); padding:5px 12px; border-radius:99px; }
+details.filtres-repli[open] .filtres-modifier { color:var(--gris); background:#fff; border-color:var(--trait); }
+.filtres-modifier::before { content:"Modifier"; }
+details.filtres-repli[open] .filtres-modifier::before { content:"Fermer"; }
+details.filtres-repli summary:hover .filtres-modifier { border-color:var(--accent); }
+details.filtres-repli summary:focus-visible { outline:2px solid var(--accent); outline-offset:4px; border-radius:8px; }
+.liste { grid-template-columns:minmax(0, 1fr); }

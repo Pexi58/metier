@@ -10,6 +10,7 @@ offres comptées s'affichent, avec un export CSV pour refaire le calcul dans Exc
 
 | Page | À quoi elle sert |
 |---|---|
+| [Accueil](https://pexi58.github.io/metier/) | « Par où commencer ? » : une question → la page qui y répond, et le plan des trois rubriques |
 | [Synthèse](https://pexi58.github.io/metier/presentation.html) | l'essentiel pour un métier, une idée par section, les limites |
 | [Explorer les données](https://pexi58.github.io/metier/alternance.html) | tous les filtres, la carte, les entreprises à démarcher, la fiabilité |
 | [Offres disponibles](https://pexi58.github.io/metier/offres.html) | les annonces en ligne ce matin, filtrables, exportables |
@@ -18,6 +19,12 @@ offres comptées s'affichent, avec un export CSV pour refaire le calcul dans Exc
 | [Tout le marché](https://pexi58.github.io/metier/marche.html) | toutes les offres d'emploi (pas seulement l'alternance) : la base du cours |
 
 Le détail de la veille alternance (sources, nettoyage, contrôles) est dans [ALTERNANCE.md](ALTERNANCE.md).
+
+**Navigation (refaite le 26/11/2026).** Toutes les pages ont la même barre (`assets/navigation.js` et
+`assets/navigation.css`) : quatre rubriques toujours visibles (Accueil, Alternance & stages, Marché de l'emploi,
+Six métiers à la loupe), en dessous les pages de la rubrique, et en bas de page le plan du site. Pour ajouter
+une page : une ligne dans `RUBRIQUES` (navigation.js), et la page charge navigation.css puis navigation.js.
+Les pages « Marché de l'emploi » ont désormais le même style que les autres (police, couleurs, cartes).
 
 **Auteur : Pexi58** — dossier de travail pour la séance « Écouter le marché de votre métier » (M2 MOD, IAE Clermont Auvergne).
 Ce dépôt part du dépôt de démonstration du cours ([VincentFavarin/metier](https://github.com/VincentFavarin/metier)) :

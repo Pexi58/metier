@@ -1,0 +1,72 @@
+/* ============================================================
+   navigation.css — la barre de navigation et le plan du site,
+   identiques sur toutes les pages (avec site.css ou commun.css).
+   ============================================================ */
+.barre-site, .plan-site {
+  --n-encre:#16181d; --n-gris:#626773; --n-trait:#e4e7ee; --n-accent:#1f5eff; --n-accent-fonce:#1446c9; --n-pale:#eaf0ff;
+  font-family:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.barre-int { max-width:1240px; margin:0 auto; padding:0 20px; }
+
+/* Ligne du haut : collante */
+.barre-haut { position:sticky; top:0; z-index:60; background:rgba(255,255,255,.95); backdrop-filter:saturate(1.4) blur(10px); border-bottom:1px solid var(--n-trait); }
+.barre-haut .barre-int { display:flex; align-items:center; gap:20px; min-height:58px; }
+.logo { display:flex; align-items:center; gap:10px; font-weight:700; color:var(--n-encre); white-space:nowrap; text-decoration:none; font-size:.98rem; }
+.logo:hover { text-decoration:none; }
+.logo i { width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg, var(--n-accent), #6b8cff); display:grid; place-items:center; color:#fff; font-style:normal; font-size:.95rem; flex:none; }
+.logo small { display:block; font-weight:500; color:var(--n-gris); font-size:.72rem; line-height:1.15; }
+.rubriques { display:flex; gap:2px; align-self:stretch; }
+.rubriques a { display:flex; align-items:center; padding:0 14px; color:var(--n-gris); font-weight:500; font-size:.93rem; text-decoration:none; border-bottom:3px solid transparent; white-space:nowrap; }
+.rubriques a:hover { color:var(--n-encre); text-decoration:none; background:#f5f7fb; }
+.rubriques a.ici { color:var(--n-accent-fonce); border-bottom-color:var(--n-accent); font-weight:650; }
+.rubriques .court { display:none; }
+.fraicheur-site { margin-left:auto; font-size:.78rem; color:var(--n-gris); display:flex; align-items:center; gap:7px; white-space:nowrap; }
+.fraicheur-site::before { content:""; width:8px; height:8px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); flex:none; }
+
+/* Ligne du bas : les pages de la rubrique */
+.barre-bas { background:#fff; border-bottom:1px solid var(--n-trait); }
+.barre-bas .barre-int { display:flex; align-items:center; min-height:46px; }
+.barre-bas .menu { display:flex; flex-wrap:nowrap; gap:4px; overflow-x:auto; scrollbar-width:none; padding:7px 0; }
+.barre-bas .menu::-webkit-scrollbar { display:none; }
+.barre-bas .menu a { padding:6px 13px; border-radius:99px; color:var(--n-gris); font-weight:500; font-size:.9rem; white-space:nowrap; text-decoration:none; border:1px solid transparent; }
+.barre-bas .menu a:hover { background:#f0f2f7; color:var(--n-encre); }
+.barre-bas .menu a.ici { background:var(--n-pale); color:var(--n-accent-fonce); font-weight:600; border-color:#cfdcff; }
+.rubrique-dit { margin:0; padding:10px 0; color:var(--n-gris); font-size:.88rem; }
+.barre-site a:focus-visible, .plan-site a:focus-visible { outline:2px solid var(--n-accent); outline-offset:2px; border-radius:6px; }
+
+/* Les éléments collants des pages se calent sous la barre (sa hauteur est mesurée par navigation.js) */
+html { scroll-padding-top:calc(var(--haut-entete, 58px) + 70px); }
+@media (min-width:821px) {
+  .selection { top:var(--haut-entete, 58px) !important; }
+  .sommaire { top:calc(var(--haut-entete, 58px) + 80px) !important; }
+}
+/* L'ancien en-tête des pages « Alternance » n'est plus posé ; au cas où une copie en cache le poserait. */
+header.entete { display:none; }
+
+/* Plan du site, en bas de chaque page */
+.plan-site { background:#fff; border-top:1px solid var(--n-trait); margin-top:48px; padding:28px 0 34px; color:var(--n-gris); font-size:.88rem; }
+.plan-site .barre-int { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(210px,100%), 1fr)); gap:24px; }
+.plan-site h2 { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; margin:0 0 8px; }
+.plan-site h2 a { color:var(--n-encre); text-decoration:none; }
+.plan-site ul { list-style:none; margin:0; padding:0; }
+.plan-site li { margin:4px 0; }
+.plan-site li a { color:var(--n-gris); text-decoration:none; }
+.plan-site li a:hover { color:var(--n-accent); text-decoration:underline; }
+.plan-site p { margin:10px 0 0; font-size:.8rem; }
+
+@media (max-width:980px) {
+  .barre-haut .barre-int { flex-wrap:wrap; gap:0 16px; padding-top:8px; }
+  .rubriques { order:3; flex-basis:100%; overflow-x:auto; scrollbar-width:none; min-height:42px; }
+  .rubriques::-webkit-scrollbar { display:none; }
+  .rubriques a { padding:0 12px; }
+  .rubriques a:first-child { padding-left:0; }
+}
+@media (max-width:520px) {
+  .barre-int { padding:0 14px; }
+  .logo small { display:none; }
+  .fraicheur-site { font-size:.72rem; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+  .rubriques a { font-size:.9rem; padding:0 10px; }
+  .rubriques .long { display:none; }
+  .rubriques .court { display:inline; }
+}
+@media print { .barre-haut, .barre-bas, .plan-site { display:none !important; } }

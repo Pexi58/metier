@@ -138,3 +138,7 @@ table.legal small { color:var(--gris); }
 .badge.alerte { background:#fff4e5; border-color:#ffc27a; color:#8a4b00; }
 .sal-douteux { color:#8a4b00; text-decoration:line-through; text-decoration-color:#ffc27a; }
 .retirees { margin:6px 0 0; font-size:.88rem; }
+
+/* Petits écrans (26/11/2026) : rien ne doit dépasser de l'écran. */
+.champ, select.champ { max-width:100%; min-width:0; }
+table.sr-only { display:block; }   /* un tableau ignore width:1px : en bloc, il reste invisible sans élargir la page */

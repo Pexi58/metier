@@ -57,9 +57,14 @@ Pour ajouter un métier : une ligne dans `config/alternance.json`, et dans `scri
 
 ## Les pages du site
 
+Le site a une page d'accueil (« Par où commencer ? ») et trois rubriques, toujours visibles dans la barre du haut :
+**Alternance & stages**, **Marché de l'emploi**, **Six métiers à la loupe**. La ligne du dessous donne les pages de la
+rubrique ; le plan complet du site est en bas de chaque page.
+
 - **Synthèse** (`presentation.html`) : l'essentiel pour un métier, une idée par section, imprimable en PDF.
 - **Explorer les données** (`alternance.html`) : tous les filtres, la carte, les entreprises à démarcher, la fiabilité.
 - **Offres disponibles** (`offres.html`) : les annonces en ligne, filtrables, exportables en CSV.
+- **Six métiers à la loupe** (`metiers-cibles.html`) : pour brand manager, chef de produit, chargé de clientèle, chef de secteur GMS, chargé d'études marketing et chargé de communication : les entreprises et secteurs qui recrutent, le classement des villes qui ont au moins une offre, les habitants par offre, les secteurs de chaque grande ville.
 - **Tout le marché** (`marche.html`) et ses pages liées (salaires, exigences, recruteurs, mouvement) : le marché de l'emploi en général.
 
 **Chaque chiffre est vérifiable.** Un clic ouvre une fenêtre avec le calcul (par exemple « 188 ÷ 938 = 20 % »), les filtres appliqués, les sources, et la liste des offres comptées, exportable en CSV pour refaire le calcul dans Excel.

@@ -13,17 +13,6 @@ const Site = (() => {
   const nb = n => Number(n || 0).toLocaleString("fr-FR");
   const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
   const dateFr = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ""); return m ? `${m[3]}/${m[2]}/${m[1]}` : "—"; };
-  const PAGES = [
-    ["presentation.html", "Synthèse"],
-    ["alternance.html", "Explorer les données"],
-    ["offres.html", "Offres disponibles"],
-    ["evolution.html", "Évolution"],
-    ["alternance.html#fiabilite", "Méthode et sources"],
-    ["metiers-cibles.html", "Six métiers à la loupe"],
-    ["marche.html", "Tout le marché (emplois)"],
-  ];
-  const ici = location.pathname.split("/").pop() || "presentation.html";
-
   // Les choix communs aux pages : type d'offre (c) et métier (m).
   const CLE = "alternance-choix";
   function lireChoix() { try { return JSON.parse(localStorage.getItem(CLE)) || {}; } catch { return {}; } }
@@ -40,15 +29,10 @@ const Site = (() => {
     });
   }
 
+  // La barre de navigation est commune à tout le site (assets/navigation.js) : on y ajoute la date des données.
   function entete() {
-    const el = document.getElementById("entete");
-    if (!el) return;
     const pc = (D.qualite && D.qualite.par_contrat) || {};
-    el.outerHTML = `<header class="entete"><div class="entete-int">
-      <a class="marque" href="presentation.html"><i>A</i><span>Alternance &amp; stages<small>marketing, digital, communication</small></span></a>
-      <nav class="menu" aria-label="Pages">${PAGES.map(([p, l]) => `<a data-page="${p}" href="${p}"${p === ici ? ' class="ici" aria-current="page"' : ""}>${l}</a>`).join("")}</nav>
-      <span class="fraicheur" title="Collecte automatique chaque matin sur GitHub">Données du ${dateFr(D.date)} · ${nb(pc.alternance)} alternances, ${nb(pc.stage)} stages</span>
-    </div></header>`;
+    if (window.Navigation) Navigation.poser(`Données du ${dateFr(D.date)} · ${nb(pc.alternance)} alternances, ${nb(pc.stage)} stages`);
     majLiens();
   }
   function pied() {
@@ -60,7 +44,6 @@ const Site = (() => {
       Collecte, nettoyage et contrôles : <code>scripts/alternance.mjs</code>, relancé chaque matin par GitHub Actions.
       Chaque chiffre est cliquable pour voir son calcul et les offres comptées. <a href="alternance.html#fiabilite">Méthode, contrôles et limites</a>.
       Pas de scraping de LinkedIn, Indeed, APEC, HelloWork ou JobTeaser (interdit par leurs conditions d'utilisation).
-      Les pages « Tout le marché » (toutes les offres d'emploi, pas seulement l'alternance) reprennent la base du cours d'analyse de données (M2 MOD, IAE Clermont Auvergne).
     </footer>`;
   }
   // Sommaire latéral : met en évidence la section en cours de lecture.

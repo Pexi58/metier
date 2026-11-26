@@ -6,11 +6,12 @@ Usage (après scripts/extraire.py et scripts/resumer.py, comme dans .github/work
 Lit :
     data/resume.json             les offres actives du jour (écrit par resumer.py)
     config/metiers-cibles.json   les six métiers : codes ROME, codes voisins, règle sur l'intitulé
-    data/geo/population.json     population de chaque commune et de chaque département (INSEE, via
-                                 geo.api.gouv.fr) ; téléchargé s'il manque ou date de plus de 180 jours
+    data/geo/population.json     population et rang en France de chaque commune, population de chaque
+                                 département (INSEE, via geo.api.gouv.fr) ; refait s'il manque ou a plus de 180 jours
 Écrit :
     data/metiers-cibles.json     les offres des six métiers, les villes et départements avec leur population
     data/metiers-cibles.js       le même contenu, lisible par la page ouverte en double-clic (sans serveur)
+    data/accueil.js              trois chiffres pour la page d'accueil (index.html)
 
 Les comptages (entreprises, secteurs, villes, ratios) sont refaits dans le navigateur, selon le métier
 choisi : ce script ne fait que trier les offres et préparer les populations.
@@ -30,8 +31,7 @@ from extraire import METIERS  # noqa: E402
 
 GEO = "https://geo.api.gouv.fr"
 POPULATION = RACINE / "data" / "geo" / "population.json"
-SEUIL_VILLE = 5000          # communes gardées dans le cache de population (les autres : comptées au département)
-GRANDES_VILLES = 40         # les plus peuplées, toujours envoyées à la page
+GRANDES_VILLES = 40         # les plus peuplées, toujours envoyées à la page (même sans offre)
 
 # Paris, Lyon et Marseille : les offres donnent souvent l'arrondissement, la population est celle de la ville.
 ARRONDISSEMENTS = [(re.compile(r"^751\d\d$"), "75056"), (re.compile(r"^6938\d$"), "69123"),
@@ -46,7 +46,8 @@ def population():
     """Le cache de population ; le refait depuis geo.api.gouv.fr s'il manque ou a plus de 180 jours."""
     if POPULATION.exists():
         p = json.loads(POPULATION.read_text(encoding="utf-8"))
-        if (date.today() - datetime.strptime(p["lu_le"], "%Y-%m-%d").date()).days <= 180:
+        # Le cache doit contenir toutes les communes (rang en France) : les anciens caches partiels sont refaits.
+        if p.get("toutes") and (date.today() - datetime.strptime(p["lu_le"], "%Y-%m-%d").date()).days <= 180:
             return p
     try:
         communes = requests.get(f"{GEO}/communes", params={
@@ -60,16 +61,19 @@ def population():
     pop_dep = {}
     for c in communes:
         pop_dep[c.get("codeDepartement")] = pop_dep.get(c.get("codeDepartement"), 0) + (c.get("population") or 0)
+    # Rang de chaque commune en France, de la plus peuplée (1) à la moins peuplée.
+    classees = sorted(communes, key=lambda c: -(c.get("population") or 0))
     p = {
+        "toutes": True,
         "lu_le": f"{date.today():%Y-%m-%d}",
         "source": "INSEE, population municipale, via geo.api.gouv.fr (API Découpage administratif)",
-        "communes": {c["code"]: [c["nom"], c["population"], c.get("codeDepartement")]
-                     for c in communes if (c.get("population") or 0) >= SEUIL_VILLE},
+        "communes": {c["code"]: [c["nom"], c.get("population") or 0, c.get("codeDepartement"), rang]
+                     for rang, c in enumerate(classees, start=1)},
         "departements": {d["code"]: [d["nom"], pop_dep.get(d["code"], 0)] for d in deps},
     }
     POPULATION.parent.mkdir(parents=True, exist_ok=True)
     POPULATION.write_text(json.dumps(p, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"Population : {len(communes)} communes lues, {len(p['communes'])} de {SEUIL_VILLE} habitants ou plus gardées")
+    print(f"Population : {len(communes)} communes lues et classées")
     return p
 
 
@@ -118,7 +122,7 @@ def main():
             "c": dans_code,     # dans le code ROME de ces métiers, quel que soit l'intitulé
         })
 
-    grandes = sorted(pop["communes"], key=lambda c: -pop["communes"][c][1])[:GRANDES_VILLES]
+    grandes = sorted(pop["communes"], key=lambda c: pop["communes"][c][3])[:GRANDES_VILLES]
     villes = {c: pop["communes"][c] for c in set(grandes) | villes_vues if c in pop["communes"]}
     for m in metiers:
         m["dans_code"] = sum(1 for o in offres if m["cle"] in o["c"])
@@ -134,13 +138,17 @@ def main():
         "metiers": metiers,
         "contrats": resume.get("contrats", {}),
         "offres": offres,
-        "villes": villes,                     # code INSEE -> [nom, population, département]
+        "villes": villes,                     # code INSEE -> [nom, population, département, rang en France]
         "grandes_villes": grandes,            # les plus peuplées de France, dans l'ordre
         "departements": pop["departements"],  # code -> [nom, population]
     }
     texte = json.dumps(sortie, ensure_ascii=False, separators=(",", ":"))
     (RACINE / "data" / "metiers-cibles.json").write_text(texte, encoding="utf-8")
     (RACINE / "data" / "metiers-cibles.js").write_text("window.METIERS_CIBLES = " + texte + ";\n", encoding="utf-8")
+    # Quelques chiffres pour la page d'accueil (index.html), dans un fichier minuscule.
+    accueil = {"date": resume["date"], "emplois": len(resume["offres"]),
+               "six_metiers": sum(1 for o in offres if o["m"]), "metiers_suivis": len(METIERS)}
+    (RACINE / "data" / "accueil.js").write_text("window.ACCUEIL = " + json.dumps(accueil) + ";\n", encoding="utf-8")
     print(f"Écrit : data/metiers-cibles.json et .js — {len(offres)} offres, {len(villes)} villes, "
           f"{len(texte) // 1024} Ko")
     for m in metiers:

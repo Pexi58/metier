@@ -72,7 +72,7 @@ const AURA = new Set(["01", "03", "07", "15", "26", "38", "42", "43", "63", "69"
 const IDF = new Set(["75", "77", "78", "91", "92", "93", "94", "95"]);
 const EXPS = ["Débutant accepté", "Moins d'un an", "1 à 2 ans", "3 à 4 ans", "5 ans et plus", "Non précisé"];
 
-Chart.defaults.font.family = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+Chart.defaults.font.family = "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
 Chart.defaults.plugins.legend.display = false;
 
 let D, graphiques = {};
@@ -216,17 +216,6 @@ function filtrer(f) {
 /* ============================================================
    4) NAVIGATION ET PANNEAU DE FILTRES, IDENTIQUES PARTOUT
    ============================================================ */
-const PAGES = [
-  ["marche.html", "Tout le marché"],
-  ["salaires.html", "Ce que ça paie"],
-  ["exigences.html", "Ce qu'on vous demande"],
-  ["recruteurs.html", "Qui recrute"],
-  ["mouvement.html", "Le marché bouge"],
-  ["metiers-cibles.html", "Six métiers à la loupe"],
-];
-// Chemins relatifs partout : le site vit dans un sous-dossier (/metier/) sur GitHub Pages.
-const PAGE_ICI = (location.pathname.split("/").pop() || "marche.html");
-
 const HTML_FILTRES = `
   <div class="filtres">
     <div>
@@ -251,17 +240,11 @@ const HTML_FILTRES = `
   <p class="compte" id="compte"></p>`;
 
 function poserNavEtFiltres() {
-  const n = document.getElementById("nav-ici");
-  if (n) n.outerHTML = `<nav class="nav">` + PAGES.map(([url, lib]) =>
-    `<a href="${url}"${url === PAGE_ICI ? ' class="ici" aria-current="page"' : ""}>${lib}</a>`).join("")
-    + `<a href="presentation.html" style="margin-left:auto;font-weight:600">Alternance et stages →</a></nav>`;
-
+  // La barre de navigation est posée par assets/navigation.js, commune à tout le site.
+  // Filtres : repliés sur toutes les pages, pour que les chiffres viennent en premier ;
+  // le résumé dit ce qui est sélectionné, un clic l'ouvre. Ils suivent d'une page à l'autre.
   const f = document.getElementById("filtres-ici");
-  if (f) f.outerHTML = (PAGE_ICI === "marche.html"
-    // Accueil : le panneau est déplié, c'est le point de départ.
-    ? `<div class="carte">${HTML_FILTRES}</div>`
-    // Ailleurs : replié, on vient lire une page, pas refaire ses filtres.
-    : `<details class="carte"><summary id="resume-filtres">Filtres</summary>${HTML_FILTRES}</details>`)
+  if (f) f.outerHTML = `<details class="carte filtres-repli"><summary><span class="filtres-titre">Filtres</span><span id="resume-filtres">…</span><span class="filtres-modifier"></span></summary>${HTML_FILTRES}</details>`
     + `<div class="vide" id="aucune" hidden>Aucune offre ne correspond à ces filtres. Recochez un métier, un type de contrat ou un niveau de poste.</div>`;
 
   const p = document.getElementById("pied");
@@ -269,7 +252,7 @@ function poserNavEtFiltres() {
     `<p style="margin:0 0 8px"><a href="mouvement.html#limites">Limites de ces chiffres</a></p>
      Chaîne : API France Travail → <code>scripts/extraire.py</code> → <code>data/brut/</code> (chaque version d'annonce, une seule fois) + <code>data/actives/</code> (les offres du jour) → <code>scripts/resumer.py</code> → <code>data/resume.json</code> → ces pages (GitHub Pages).
      Une Action GitHub relance la collecte chaque matin à 7 h. Identifiants dans les secrets du dépôt, jamais dans le code.
-     Ces pages reprennent la base et les graphiques du cours d'analyse de données (M2 MOD, IAE Clermont Auvergne) ; la veille alternance et stages est l'ajout propre à ce dépôt : <a href="presentation.html">Synthèse</a>.`;
+     Ces pages reprennent la base et les graphiques du cours d'analyse de données (M2 MOD, IAE Clermont Auvergne).`;
 }
 
 /* ============================================================
@@ -296,7 +279,9 @@ const Commun = {
     document.getElementById("compte").innerHTML = `<b>${n}</b> offre${n > 1 ? "s" : ""} sélectionnée${n > 1 ? "s" : ""} sur ${total} — ${f.metiers.size} métier${f.metiers.size > 1 ? "s" : ""} coché${f.metiers.size > 1 ? "s" : ""}.`;
     document.getElementById("aucune").hidden = n > 0;
     const resume = document.getElementById("resume-filtres");
-    if (resume) resume.textContent = `Filtres (${f.metiers.size} métier${f.metiers.size > 1 ? "s" : ""}, ${n} offre${n > 1 ? "s" : ""})`;
+    if (resume) resume.textContent = `${f.metiers.size} métier${f.metiers.size > 1 ? "s" : ""} sur ${D.metiers.length} · `
+      + `${f.contrats.size === CONTRATS.length ? "tous les contrats" : f.contrats.size + " type" + (f.contrats.size > 1 ? "s" : "") + " de contrat"} · `
+      + `${f.niveaux.size === NIVEAUX.length ? "tous les niveaux" : f.niveaux.size + " niveau" + (f.niveaux.size > 1 ? "x" : "")} — ${n} offre${n > 1 ? "s" : ""}`;
     // Plus rien de sélectionné : le message dit « recochez un métier », le panneau replié
     // doit donc s'ouvrir. Sinon la page réclame une action dont elle cache les cases.
     if (n === 0) { const d = document.querySelector("details.carte"); if (d) d.open = true; }
@@ -321,6 +306,7 @@ const Commun = {
       if (Array.isArray(d.niveaux) && d.niveaux.length) NIVEAUX = d.niveaux.filter(x => Array.isArray(x) && x.length === 2);
       if (Array.isArray(d.formations) && d.formations.length) FORMATIONS = d.formations;
 
+      if (window.Navigation) Navigation.poser(`Données du ${dateFr(d.date)} · ${d.offres.length} offres d'emploi`);
       const sous = document.getElementById("sous");
       if (sous) sous.innerHTML =
         `${d.source} · ${d.requete} · extraction du <b>${dateFr(d.date)}</b> · ${d.offres.length} offres actives, ${d.versions_conservees} versions d'annonces conservées`;

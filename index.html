@@ -3,19 +3,122 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Alternance et stages en marketing, digital et communication</title>
-<meta name="description" content="Alternance et stages en marketing, digital et communication : combien d'offres, où, pour quel salaire, avec quelles compétences. Données France Travail, La bonne alternance et Adzuna, mises à jour chaque matin ; chaque chiffre est vérifiable.">
+<title>Marketing &amp; emploi — alternance, stages et emplois en marketing, digital et communication</title>
+<meta name="description" content="Alternance, stages et emplois en marketing, digital et communication : combien d'offres, où, pour quel salaire, avec quelles compétences, chez qui. Données France Travail, La bonne alternance et Adzuna, mises à jour chaque matin ; chaque chiffre est vérifiable.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Alternance et stages en marketing — la synthèse">
-<meta property="og:description" content="Combien d'offres, où, pour quel salaire, avec quelles compétences. Mis à jour chaque matin ; chaque chiffre est vérifiable.">
+<meta property="og:title" content="Marketing & emploi — alternance, stages et emplois">
+<meta property="og:description" content="Combien d'offres, où, pour quel salaire, avec quelles compétences, chez qui. Mis à jour chaque matin ; chaque chiffre est vérifiable.">
 <meta property="og:locale" content="fr_FR">
 <meta name="twitter:card" content="summary">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f5eff'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
-<!-- L'entrée du site mène à la Synthèse (le travail de ce dépôt). Le tableau de bord du cours est dans marche.html. -->
-<meta http-equiv="refresh" content="0; url=presentation.html">
-<script>location.replace("presentation.html" + location.hash);</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f5eff'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='18' font-weight='700' fill='white' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E">
+<script>
+  // Les anciens liens partagés (index.html#m=M1620) ouvraient la Synthèse d'un métier : on les y renvoie.
+  if (/(^#|&)(m|c)=/.test(location.hash)) location.replace("presentation.html" + location.hash);
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/site.css?v=4">
+<link rel="stylesheet" href="assets/navigation.css?v=1">
+<script src="assets/navigation.js?v=1"></script>
+<style>
+  .accueil-hero { padding:10px 0 6px; }
+  .accueil-hero h1 { font-size:clamp(1.8rem, 4vw, 2.7rem); line-height:1.12; margin:0 0 12px; max-width:820px; }
+  .accueil-hero .chapo { font-size:1.12rem; color:var(--gris); max-width:760px; margin:0; }
+  .chiffres a.chiffre { color:inherit; display:block; }
+  .chiffres a.chiffre:hover { text-decoration:none; border-color:var(--accent); }
+  .chiffres a.chiffre b { color:var(--accent); }
+  .questions { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(330px,100%), 1fr)); gap:12px; }
+  a.question { display:flex; gap:14px; align-items:flex-start; background:#fff; border:1px solid var(--trait); border-radius:var(--rayon); padding:16px 18px; box-shadow:var(--ombre); color:var(--encre); transition:border-color .15s, transform .15s; }
+  a.question:hover { text-decoration:none; border-color:var(--accent); transform:translateY(-1px); }
+  a.question:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .question .icone { flex:none; width:40px; height:40px; border-radius:11px; display:grid; place-items:center; font-size:1.25rem; background:var(--accent-pale); }
+  .question b { display:block; font-size:1.02rem; line-height:1.35; margin-bottom:4px; }
+  .question span.ou { font-size:.86rem; color:var(--gris); }
+  .question span.ou i { font-style:normal; font-weight:600; color:var(--accent-fonce); }
+  .question .fleche { margin-left:auto; color:var(--accent); font-weight:700; align-self:center; }
+  .rubriques-accueil { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(300px,100%), 1fr)); gap:16px; }
+  .rubrique { background:#fff; border:1px solid var(--trait); border-radius:var(--rayon); padding:20px; box-shadow:var(--ombre); border-top:4px solid var(--teinte, var(--accent)); }
+  .rubrique h3 { margin:0 0 6px; font-size:1.1rem; }
+  .rubrique h3 a { color:var(--encre); }
+  .rubrique p { margin:0 0 12px; color:var(--gris); font-size:.92rem; }
+  .rubrique ul { list-style:none; padding:0; margin:0; display:grid; gap:2px; }
+  .rubrique li a { display:flex; justify-content:space-between; gap:10px; padding:7px 10px; margin:0 -10px; border-radius:8px; color:var(--encre); font-size:.93rem; }
+  .rubrique li a small { color:var(--gris); text-align:right; }
+  .rubrique li a:hover { background:#f3f6fc; text-decoration:none; }
+  .rubrique li a:hover b { color:var(--accent); }
+  .rubrique li b { font-weight:600; }
+  .sources { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(260px,100%), 1fr)); gap:12px; }
+  .sources .carte p { margin:0; font-size:.92rem; color:#2c313b; }
+  .sources .carte b { display:block; margin-bottom:4px; }
+</style>
 </head>
-<body style="font-family:system-ui,sans-serif;padding:24px">
-  <p><a href="presentation.html">Alternance et stages : la synthèse</a> · <a href="marche.html">Tout le marché de l'emploi</a></p>
+<body>
+<div id="entete"></div>
+
+<main class="page">
+  <section class="hero accueil-hero">
+    <p class="surtitre" id="surtitre">Marketing, digital, communication</p>
+    <h1>Où trouver une alternance, un stage ou un emploi en marketing ?</h1>
+    <p class="chapo">Chaque matin, les offres publiées en France sont collectées, nettoyées et comptées. Ce site répond à vos questions avec ces chiffres, et chaque chiffre se vérifie : un clic montre le calcul et les offres comptées.</p>
+  </section>
+
+  <div class="chiffres" id="chiffres" style="margin-top:22px"></div>
+
+  <section class="section">
+    <div class="section-tete"><h2>Par où commencer ? Choisissez votre question</h2></div>
+    <div class="questions">
+      <a class="question" href="presentation.html"><span class="icone" aria-hidden="true">🎓</span><span><b>Je cherche une alternance ou un stage : combien d'offres, où, pour quel salaire ?</b><span class="ou">Alternance &amp; stages › <i>Synthèse</i></span></span><span class="fleche" aria-hidden="true">→</span></a>
+      <a class="question" href="offres.html"><span class="icone" aria-hidden="true">📋</span><span><b>Je veux lire les annonces en ligne ce matin et postuler</b><span class="ou">Alternance &amp; stages › <i>Offres disponibles</i></span></span><span class="fleche" aria-hidden="true">→</span></a>
+      <a class="question" href="alternance.html"><span class="icone" aria-hidden="true">🗺️</span><span><b>Je veux tout filtrer moi-même : zone, contrat, source, carte, entreprises à démarcher</b><span class="ou">Alternance &amp; stages › <i>Explorer les données</i></span></span><span class="fleche" aria-hidden="true">→</span></a>
+      <a class="question" href="metiers-cibles.html"><span class="icone" aria-hidden="true">🔎</span><span><b>Pour six métiers précis : quelles entreprises, quels secteurs, quelles villes recrutent ?</b><span class="ou"><i>Six métiers à la loupe</i></span></span><span class="fleche" aria-hidden="true">→</span></a>
+      <a class="question" href="salaires.html"><span class="icone" aria-hidden="true">💶</span><span><b>Combien paie un emploi en marketing, selon le métier et le niveau ?</b><span class="ou">Marché de l'emploi › <i>Ce que ça paie</i></span></span><span class="fleche" aria-hidden="true">→</span></a>
+      <a class="question" href="exigences.html"><span class="icone" aria-hidden="true">🧰</span><span><b>Quelle expérience, quel diplôme, quels outils demande-t-on ?</b><span class="ou">Marché de l'emploi › <i>Ce qu'on vous demande</i></span></span><span class="fleche" aria-hidden="true">→</span></a>
+      <a class="question" href="recruteurs.html"><span class="icone" aria-hidden="true">🏢</span><span><b>Qui recrute dans tous les métiers du marketing, du digital et de la communication ?</b><span class="ou">Marché de l'emploi › <i>Qui recrute</i></span></span><span class="fleche" aria-hidden="true">→</span></a>
+      <a class="question" href="evolution.html"><span class="icone" aria-hidden="true">📈</span><span><b>Le nombre d'offres monte-t-il ou baisse-t-il ?</b><span class="ou">Alternance &amp; stages › <i>Évolution</i></span></span><span class="fleche" aria-hidden="true">→</span></a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-tete"><h2>Les trois rubriques du site</h2><p>Le menu en haut de chaque page reprend ces trois rubriques ; la ligne du dessous donne les pages de la rubrique où vous êtes.</p></div>
+    <div class="rubriques-accueil" id="rubriques"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-tete"><h2>D'où viennent les chiffres</h2></div>
+    <div class="sources">
+      <div class="carte"><p><b>Des sources officielles</b>France Travail, La bonne alternance (l'API publique de l'alternance) et Adzuna. Pas de copie de LinkedIn, Indeed ou HelloWork : leurs conditions l'interdisent.</p></div>
+      <div class="carte"><p><b>Mis à jour chaque matin</b>Des robots GitHub collectent les offres vers 7 h, puis le site se met à jour tout seul. La date des données est affichée en haut à droite.</p></div>
+      <div class="carte"><p><b>Vérifiable</b>Chaque chiffre s'ouvre sur son calcul et la liste des offres comptées, exportable pour Excel. <a href="alternance.html#fiabilite">Méthode et limites</a>.</p></div>
+    </div>
+  </section>
+</main>
+
+<script src="data/accueil.js"></script>
+<script src="data/historique/stats.js"></script>
+<script>
+(() => {
+  const A = window.ACCUEIL || {}, E = window.EVOLUTION || {};
+  const jour = (E.jours || []).slice(-1)[0] || {};
+  const nb = n => n == null ? "—" : Number(n).toLocaleString("fr-FR");
+  const dateFr = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ""); return m ? `${m[3]}/${m[2]}/${m[1]}` : ""; };
+  const date = A.date || jour.date;
+  if (date) {
+    document.getElementById("surtitre").textContent = `Marketing, digital, communication · données du ${dateFr(date)}`;
+    Navigation.poser(`Données du ${dateFr(date)}`);
+  }
+  document.getElementById("chiffres").innerHTML = [
+    ["presentation.html", jour.alternance, "offres d'alternance en ligne, hors offres publiées par des écoles", "Alternance & stages"],
+    ["presentation.html#c=stage", jour.stage, "offres de stage en ligne, hors écoles", "Alternance & stages"],
+    ["marche.html", A.emplois, `offres d'emploi France Travail dans ${A.metiers_suivis || 22} métiers`, "Marché de l'emploi"],
+    ["metiers-cibles.html", A.six_metiers, "offres pour les six métiers à la loupe (brand manager, chef de produit…)", "Six métiers"],
+  ].filter(c => c[1] != null).map(([url, v, l, r]) =>
+    `<a class="chiffre" href="${url}"><b>${nb(v)}</b><span>${l} →</span></a>`).join("");
+  // Les trois rubriques, avec leurs pages : la même liste que le menu (assets/navigation.js).
+  const teintes = { alternance: "#1f5eff", marche: "#0f7b3f", six: "#ff6a00" };
+  document.getElementById("rubriques").innerHTML = Navigation.RUBRIQUES.slice(1).map(r => `
+    <div class="rubrique" style="--teinte:${teintes[r.id]}"><h3><a href="${r.url}">${r.titre}</a></h3><p>${r.dit}</p>
+      <ul>${r.pages.map(([p, l, d]) => `<li><a href="${p}"><b>${l}</b><small>${d || ""}</small></a></li>`).join("")}</ul></div>`).join("");
+})();
+</script>
 </body>
 </html>
