@@ -1,1 +1,1 @@
-window.ACCUEIL = {"date": "2026-11-26", "emplois": 2927, "six_metiers": 806, "metiers_suivis": 22};
+window.ACCUEIL = {"date": "2026-11-27", "emplois": 2907, "six_metiers": 815, "metiers_suivis": 22};
